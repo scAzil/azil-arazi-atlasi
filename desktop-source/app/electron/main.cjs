@@ -13,6 +13,18 @@ store=await new Store(root).init();
 protocol.handle('atlas',async request=>{try{const u=new URL(request.url);if(u.hostname!=='app')return new Response('',{status:404});const rel=decodeURIComponent(u.pathname).replace(/^\/+/,''),base=path.join(__dirname,'../app');let f;if(rel.startsWith('asset/'))f=store.assetFile(rel.slice(6));else{f=path.resolve(base,rel||'index.html');if(!f.startsWith(base+path.sep))return new Response('',{status:404})}const types={'.js':'text/javascript','.css':'text/css','.html':'text/html','.svg':'image/svg+xml','.json':'application/json','.geojson':'application/json','.jpg':'image/jpeg','.png':'image/png','.webp':'image/webp'};return new Response(await fs.readFile(f),{headers:{'Content-Type':types[path.extname(f)]||'application/octet-stream'}})}catch{return new Response('Dosya yok',{status:404})}});
 const handlers={
  'state':async()=>({...store.state,warning:store.lastWarning,archivePath:store.dir,backupPath:store.backups,version:app.getVersion()}),
+ 'window-fullscreen':()=>{win.setFullScreen(!win.isFullScreen());return win.isFullScreen()},
+ 'storage':async()=>{
+   const files=await fs.readdir(store.assets);
+   let bytes=0, count=0;
+   for(const name of files){
+     if(!/^[a-f0-9]{64}\.(jpg|png|webp|json|kmz|kml)$/.test(name))continue;
+     try{const st=await fs.stat(path.join(store.assets,name));if(st.isFile()){bytes+=st.size;count++}}catch{}
+   }
+   const archive=(await fs.stat(store.file)).size;
+   const backups=(await fs.readdir(store.backups)).filter(name=>name.endsWith('.json'));
+   return {assetsCount:count,assetsBytes:bytes,archiveBytes:archive,backupsCount:backups.length};
+ },
  'repair-folders':()=>store.repairMirrors(),'save':r=>store.save(r),'import':({record,restore})=>store.importRecord(record,restore),'remove':ids=>store.remove(ids),'remove-project':name=>store.remove(store.state.records.filter(r=>r.project===name).map(r=>r.id),name),'restore':id=>store.restore(id),'purge':ids=>store.purge(ids),'history':id=>store.historyRestore(id),'settings':v=>store.settings(v),'project':({name,newName})=>store.project(name,newName),'layer':v=>store.layer(v),
  'backup':reason=>store.run(()=>store.backup(['manual','before-import'].includes(reason)?reason:'manual')),
  'external-restore':async()=>{const r=await dialog.showOpenDialog(win,{title:'Harici yedek JSON dosyası (yanında Varliklar klasörü bulunmalı)',properties:['openFile'],filters:[{name:'Arşiv yedeği',extensions:['json']}]});if(r.canceled)return false;return store.restoreBackup(path.basename(r.filePaths[0]),path.dirname(r.filePaths[0]))},
