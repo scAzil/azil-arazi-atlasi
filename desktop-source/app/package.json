@@ -1,0 +1,9 @@
+{
+  "name": "arazi-atlasi-desktop",
+  "version": "1.0.3",
+  "description": "Yerel saha arşivi ve tek yönlü telefon aktarımı",
+  "author": "AZiL",
+  "private": true,
+  "main": "electron/main.cjs",
+  "productName": "Arazi Atlası"
+}

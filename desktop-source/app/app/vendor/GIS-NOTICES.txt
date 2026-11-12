@@ -1,0 +1,10 @@
+GIS dependencies (vendored for offline calculation)
+
+Proj4js 2.12.1 — MIT license
+Source: https://github.com/proj4js/proj4js/tree/2.12.1
+Distribution: https://cdn.jsdelivr.net/npm/proj4@2.12.1/dist/proj4.js
+
+Turf.js 7.2.0 — MIT license
+Source: https://github.com/Turfjs/turf/tree/v7.2.0
+Distribution: https://cdn.jsdelivr.net/npm/@turf/turf@7.2.0/turf.min.js
+Individual dependency notices are retained in the distributed bundles.
