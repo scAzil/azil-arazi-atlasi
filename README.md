@@ -1,21 +1,37 @@
 # AZiL Arazi Atlası — Windows
 
-Saha gözlemlerini, konumları, fotoğrafları ve harita verilerini düzenlemek için geliştirilen AZiL Arazi Atlası'nın Windows sürümü.
+Arazi, CBS, proje/ziyaret ve saha fotoğraflarını yerel arşivde birleştiren AZiL masaüstü uygulaması.
 
-## Windows sürümünü indir
+## Kararlı sürüm (mevcut)
 
-**[Arazi Atlası v1.0.3 — Windows x64 (GitHub Releases)](https://github.com/scAzil/azil-arazi-atlasi/releases/tag/v1.0.3)**
+**[Arazi Atlası v1.0.3 — Windows x64](https://github.com/scAzil/azil-arazi-atlasi/releases/tag/v1.0.3)**
 
-Paket: `Arazi-Atlasi-1.0.3-Windows-x64.zip` (151 MiB). ZIP'i tamamen çıkarın ve klasör içindeki `Arazi Atlasi.exe` dosyasını çalıştırın; `resources` klasörünü ve destek dosyalarını EXE'den ayırmayın.
+Bu sürüm kullanıcı verilerini `Arsiv` ve `Yedekler` klasörlerinde tutar. ZIP'i tamamen çıkarın; `Arazi Atlasi.exe` dosyasını `resources` klasöründen ayırmayın.
 
-**SHA-256:** `1a6bb52967afb7545e99ad7a1af7a0c4c72674d0a78246a04bb02bbb9525a9ae`
+## v1.1.0-beta.1 — Harita Çalışma Alanı (test sürümü)
 
-Windows'ta açılış, veri saklama ve aktarım iş akışları henüz bağımsız olarak doğrulanmadı. Önemli saha kayıtları üzerinde kullanmadan önce yedek alın.
+[Geliştirme dalı](https://github.com/scAzil/azil-arazi-atlasi/tree/feat/atlas-v1.1-map-workspace) · [Windows test derlemeleri (Actions)](https://github.com/scAzil/azil-arazi-atlasi/actions)
 
-## Diğer paketler
+Yenilikler:
+- **Harita pencerenin tamamını kullanır.** Normal menü, üst başlık ve durum çubuğu harita görünümünde gizlenir.
+- Yüzen küçük kontrol çubuğu: **Çalışma alanı, Menü, Araçlar, Katmanlar, Bilgi, Tam ekran**. Paneller kapalı başlar; tek tuşla açılır. Windows F11 tam ekran desteklenir.
+- Haritadaki nokta seçimi, katmanlar, pafta indeksi, KML/KMZ, mesafe/alan ölçümü, WGS84–UTM 37N koordinatları korunur.
+- **Fotoğraf boyutu** tercihi: Orijinal, 1920 ve 1280 piksel. Yalnızca *yeni eklenen* fotoğraflar etkilenir.
+- **Depolama durumu**: `Ayarlar → Depolama durumunu göster` ile yerel varlık dosyaları, JSON boyutu, yedek sayısı.
+- **Telefon → PC QR aktarımı** yine tek yönlüdür; projeler, bağlı ziyaretler ve mevcut JSON yedekleri korunur.
 
-- [0.2 QR kaynak/hazırlama paketi](AZiL_Arazi_Atlasi_Masaustu_0_2_QR.zip): Önceki geliştirme sürümünün kaynakları ve derleme betikleri. **v1.0.3'ün tam kaynak kodu değildir.**
-- [Web sürümü](https://sbncifci.tr.gg/Arazi-Atlasi.htm): Tarayıcıda erişilebilir sürüm.
-- [Eski web başlatıcısı ve hazırlama dosyaları](downloads/): Python ile web sürümünü açan ayrı bir prototiptir; Windows 1.0.3 paketiyle karıştırılmamalıdır.
+### Önemli: arşiv yedeği
 
-Sürüm dosyaları GitHub Releases bölümünde yayımlanır.
+Bu geliştirme, yayımlanmış Windows **v1.0.3** paketinden geri çıkarılan Electron kaynak dosyalarını temel alır. Özgün `app.asar` üzerinden yalnızca değiştirilen kod dosyaları güncellenerek test paketi hazırlanır. Eski kaynak ZIP/Release korunur.
+
+**Beta sürümü saha verilerinin tek kopyası üzerinde denemeyin.** Önce mevcut `Arsiv` ve `Yedekler` klasörlerinizi başka bir konuma kopyalayın. Arşivler uygulama klasöründe olduğundan, beta paketini başka klasöre açarsanız eski kayıtlar kendiliğinden gelmez. Veri klasörlerini taşımadan önce yedek alın.
+
+Arayüz test paketi doğrulanıp Windows'ta gerçek deneme yapıldıktan sonra ayrı bir v1.1 Release hazırlanacaktır.
+
+## Kaynaklar
+
+- [Geri çıkarılan Electron kodu](desktop-source/app) (asıl çalışma dosyaları; paketlenmiş üçüncü taraf varlıkların tamamı bu depoda bulunmaz)
+- [Windows v1.1 derleme iş akışı](.github/workflows/build-v1.1.yml)
+- [Web Arazi Atlası](https://sbncifci.tr.gg/Arazi-Atlasi.htm)
+
+Kurum içi gizli saha kayıtlarını, hizmete özel katmanları veya kişisel verileri herkese açık GitHub deposuna yüklemeyin. Repo yalnızca uygulama kodu içindir.
