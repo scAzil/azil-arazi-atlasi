@@ -56,7 +56,7 @@ export function portableManifest({createdAt,platform,appVersion,projectCount,rec
   const list=assets.map(asset=>{
     const sha256=String(asset.sha256||'').toLowerCase();
     if(!/^[a-f0-9]{64}$/.test(sha256))throw Error('Asset SHA-256 missing');
-    if(!/^assets\/[a-f0-9]{64}\.(jpg|jpeg|png|webp|json|kml|kmz)$/.test(asset.path))
+    if(!/^assets\/[a-f0-9]{64}\.(jpg|png|webp|json|kml|kmz)$/.test(asset.path))
       throw Error('Invalid asset path');
     if(!Number.isSafeInteger(asset.size)||asset.size<0)throw Error('Invalid asset length');
     return {path:asset.path,sha256,size:asset.size,mediaType:String(asset.mediaType||'application/octet-stream')};
@@ -90,7 +90,7 @@ export function validatePortableManifest(m){
   if(m.assets.length>100000)throw Error('Arşivde çok fazla varlık var.');
   const seen=new Set();
   for(const a of m.assets){
-    if(!/^assets\/[a-f0-9]{64}\.(jpg|jpeg|png|webp|json|kml|kmz)$/.test(a.path)||
+    if(!/^assets\/[a-f0-9]{64}\.(jpg|png|webp|json|kml|kmz)$/.test(a.path)||
       !/^[a-f0-9]{64}$/.test(a.sha256)||!Number.isSafeInteger(a.size)||a.size<0||
       seen.has(a.path)||a.path.split('/')[1].split('.')[0]!==a.sha256)
       throw Error('Arşiv varlık listesi hatalı veya yineleniyor.');
