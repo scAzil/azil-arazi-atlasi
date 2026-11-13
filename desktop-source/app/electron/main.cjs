@@ -3,11 +3,13 @@ const {app,BrowserWindow,protocol,ipcMain,dialog,shell,Menu,clipboard}=require('
 const {Store}=require('./store.cjs');
 const {exportPortable,importPortable}=require('./portable-archive.cjs');
 const {diagnosticSnapshot,formatDiagnostics,archiveHealth}=require('./help-diagnostics.cjs');
+const {createLanReceiver}=require('./lan-receiver.cjs');
 const root=app.isPackaged?path.dirname(process.execPath):path.resolve(__dirname,'..');
 const legacy=path.join(app.getPath('appData'),'AZiL-Arazi-Atlasi');
 app.setPath('userData',path.join(root,'Arsiv','.Profil'));
 protocol.registerSchemesAsPrivileged([{scheme:'atlas',privileges:{standard:true,secure:true,supportFetchAPI:true,corsEnabled:true}}]);
-let win,store,closing=false;
+let win,store,closing=false,lanSession=null;
+const lanEvent=event=>{if(win&&!win.isDestroyed())win.webContents.send('atlas:lan-event',event)};
 if(!app.requestSingleInstanceLock())app.quit();else{
 app.on('second-instance',()=>{if(win){win.restore();win.focus()}});
 app.whenReady().then(async()=>{
@@ -20,6 +22,28 @@ const diagnostic=()=>diagnosticSnapshot(store,{
  electron:process.versions.electron
 });
 const handlers={
+ 'lan-start':async()=>{
+   if(lanSession){lanSession.close();lanSession=null;}
+   const instance=createLanReceiver({
+     onStatus:status=>lanEvent({kind:'status',status}),
+     onStart:async count=>{
+       await store.run(()=>store.backup('before-import'));
+       lanEvent({kind:'begin',count});
+     },
+     onRecord:async record=>{
+       const result=await store.importRecord(record,false);
+       lanEvent({kind:'receipt',status:result.status,id:result.id||null,warning:result.warning||null});
+       return result;
+     },
+     onDone:async summary=>lanEvent({kind:'done',...summary})
+   });
+   lanSession=instance;
+   try{
+     const server=await instance.ready;
+     return {url:server.url,invitations:server.invitations};
+   }catch(e){instance.close();lanSession=null;throw e;}
+ },
+ 'lan-stop':()=>{lanSession?.close();lanSession=null;return true},
  'help-diagnostics':()=>diagnostic(),
  'help-copy-diagnostics':()=>{
    clipboard.writeText(formatDiagnostics(diagnostic()));
@@ -92,4 +116,5 @@ Menu.setApplicationMenu(Menu.buildFromTemplate([{label:'Dosya',submenu:[{label:'
 win.on('close',e=>{if(closing)return;e.preventDefault();win.webContents.executeJavaScript('Boolean(window.atlasDirty)').then(async dirty=>{if(dirty&&(await dialog.showMessageBox(win,{type:'question',buttons:['Düzenlemeye dön','Kaydetmeden kapat'],defaultId:0,cancelId:0,message:'Kaydedilmemiş değişiklikler var.'})).response===0)return;await store.queue;closing=true;win.close()}).catch(()=>{closing=true;win.close()})});
 await win.loadURL('atlas://app/index.html');
 }).catch(e=>{dialog.showErrorBox('Arşiv açılamadı',e.message+'\nProgramı yazılabilir bir klasöre taşıyın. Arşiv başka konuma taşınmadı.');app.quit()});
-app.on('window-all-closed',()=>app.quit());}
+app.on('window-all-closed',()=>app.quit());
+app.on('before-quit',()=>lanSession?.close());}
