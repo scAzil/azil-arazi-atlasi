@@ -1,5 +1,6 @@
 import {readMapFile,rasterLayer} from './pafta.js';
 import {startReceiver} from './transfer.js';
+import {normalizeLayerStyle,geometryStyle} from './atlas-standard.js';
 const $=id=>document.getElementById(id),api=(n,a)=>window.desktop.call(n,a),esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 let state,view='overview',map,basemap,pointLayer,overlays=[],receiver,editPhotos=[],filter={q:'',project:'',type:'',from:'',to:''},measurement=[],measureMode=null,measureLayer,selectedPoint=null,reportIds=null;
 window.atlasDirty=false;
@@ -109,8 +110,60 @@ function mapUI(){$('mapToolbar').innerHTML=filterUI()+'<div class="actions"><sel
 if(!map){map=L.map('map',{preferCanvas:true}).setView([36.3,36.35],10);pointLayer=L.layerGroup().addTo(map);measureLayer=L.layerGroup().addTo(map);map.on('click',e=>{const p=e.latlng;const utm=proj4('EPSG:4326','+proj=utm +zone=37 +datum=WGS84 +units=m +no_defs',[p.lng,p.lat]);$('mapInfo').textContent='WGS84: '+p.lat.toFixed(6)+', '+p.lng.toFixed(6)+' · UTM 37N: '+utm[0].toFixed(2)+' / '+utm[1].toFixed(2);if(measureMode){measurement.push([p.lng,p.lat]);drawMeasure()}})}$('baseSelect').value=state.settings.basemap||'osm';$('baseSelect').onchange=guard(async()=>{await api('settings',{basemap:$('baseSelect').value});state.settings.basemap=$('baseSelect').value;setBase()});setBase();drawMap();updateMapWorkspace();setTimeout(()=>map.invalidateSize({pan:false}),50);}
 function setBase(){if(basemap)map.removeLayer(basemap);const val=$('baseSelect').value;let url,attrib,max=19;if(val==='none')return;if(val==='osm'){url='https://tile.openstreetmap.org/{z}/{x}/{y}.png';attrib='© OpenStreetMap contributors'}if(val==='nasa'){url='https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/BlueMarble_ShadedRelief_Bathymetry/default/GoogleMapsCompatible_Level8/{z}/{y}/{x}.jpeg';attrib='NASA GIBS · Blue Marble (genel görünüm, saha ayrıntısı değildir)';max=8}if(val==='esri'){if(!state.settings.esriKey){toast('Esri uydu için Ayarlar bölümünde yetkili API anahtarı girin.');return}url='https://ibasemaps-api.arcgis.com/arcgis/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}?token='+encodeURIComponent(state.settings.esriKey);attrib='Powered by Esri · Esri, Maxar, Earthstar Geographics and the GIS User Community'}basemap=L.tileLayer(url,{attribution:attrib,maxNativeZoom:max,maxZoom:22}).on('tileerror',()=>{$('mapInfo').textContent='Altlık yüklenemedi. İnternet / sağlayıcı erişimini kontrol edin. Yerel pafta ve noktalar korunur.'}).addTo(map);basemap.bringToBack()}
 function maskChoices(){return state.layers.filter(l=>l.kind==='index').flatMap(l=>l.data.features.map((feature,i)=>({id:l.id+':'+i,name:(feature.properties?.name||'Poligon '+(i+1)),feature})))}
-function drawMap(){pointLayer.clearLayers();for(const r of filtered().filter(r=>r.lat!=null)){const marker=L.circleMarker([r.lat,r.lon],{radius:r.parentId?5:8,color:r.conflict?'#b66c2c':'#294b35',fillColor:'#b7d992',fillOpacity:.9}).addTo(pointLayer);marker.bindTooltip(r.title);marker.on('click',()=>{selectedPoint=r.id;mapPanels.detail=true;updateMapWorkspace();$('mapDetail').innerHTML='<h3>'+esc(r.title)+'</h3><p>'+esc(r.project)+'</p><p>'+esc(r.note)+'</p><div class="photos">'+r.photos.slice(0,2).map(p=>'<img src="'+photoUrl(p)+'" alt="">').join('')+'</div><div class="actions">'+buttons([['detail','Aç',r.id],['edit','Düzenle',r.id],['visit','＋ Ziyaret',r.id]])+'</div>'})}for(const o of overlays)o.remove();overlays=[];const masks=maskChoices();for(const l of state.layers){if(l.visible===false)continue;if(l.kind==='index')overlays.push(L.geoJSON(l.data,{style:{color:'#b58c3a',weight:2,fillOpacity:.03}}).addTo(map));if(l.kind==='raster'){const mask=l.clip?masks.find(m=>m.id===l.maskId)?.feature:null;overlays.push(rasterLayer(l,mask).addTo(map))}if(l.kind==='vector')overlays.push(L.geoJSON(l.data,{style:{color:l.color||'#267c9d',weight:2,fillOpacity:.12},pointToLayer:(f,ll)=>L.circleMarker(ll,{radius:5,color:l.color||'#267c9d',fillOpacity:.8}),onEachFeature:(f,layer)=>{const p=f.properties||{};layer.bindPopup('<b>'+esc(p.name||p.title||'Öğe')+'</b>'+(p.folder?'<p>'+esc(p.folder)+'</p>':'')+(p.description?'<p>'+esc(p.description)+'</p>':'')+Object.entries(p.attributes||{}).map(([k,v])=>'<div><b>'+esc(k)+':</b> '+esc(v)+'</div>').join(''))}}).addTo(map))}
-$('layers').innerHTML='<h3>Katmanlar</h3><button data-action="reference">Asi hazır katmanları</button><p><small>Paftalar yerel arşivdedir; telefona gönderilmez.</small></p>'+state.layers.map(l=>'<div class="layer"><label><input type="checkbox" data-layer-visible="'+esc(l.id)+'" '+(l.visible!==false?'checked':'')+'> '+esc(l.name)+'</label>'+(l.maskMissing?'<p>İndeks kaldırıldı. Yeni sınır seçip katmanı yeniden açın.</p>':'')+(l.kind==='raster'?'<label>Saydamlık<input type="range" min="0" max="1" step="0.05" value="'+(l.opacity??.8)+'" data-layer-opacity="'+l.id+'"></label><label><input type="checkbox" data-layer-clip="'+l.id+'" '+(l.clip?'checked':'')+'> İndeks sınırına göre göster</label><select data-layer-mask="'+l.id+'"><option value="">İndeks poligonu seçin</option>'+masks.map(m=>'<option value="'+m.id+'" '+(m.id===l.maskId?'selected':'')+'>'+esc(m.name)+'</option>').join('')+'</select>':'')+'<div class="actions">'+buttons([['layer-zoom','Yaklaş',l.id],['layer-front','Üste al',l.id],['layer-delete','Kaldır',l.id]])+'</div></div>').join('')}
+function styleField(label,name,type,value,min,max,step){
+ const attrs=type==='number'?' min="'+min+'" max="'+max+'" step="'+step+'"':'';
+ return '<label>'+esc(label)+'<input name="'+name+'" type="'+type+'" value="'+esc(value)+'"'+attrs+' required></label>';
+}
+function openLayerStyleEditor(id){
+ const layer=state.layers.find(l=>l.id===id);
+ if(!layer||!['vector','index'].includes(layer.kind))throw Error('Bu katmanın çizim stili bulunmuyor.');
+ const defaults=layer.kind==='index'?'#b58c3a':'#267c9d';
+ const style=normalizeLayerStyle(layer.style,layer.color||defaults);
+ const sections=[
+  ['Noktalar',[
+   ['Nokta çizgi rengi','point.color','color',style.point.color],
+   ['Nokta iç rengi','point.fillColor','color',style.point.fillColor],
+   ['Nokta yarıçapı (piksel)','point.radius','number',style.point.radius,2,22,1],
+   ['Nokta kenar kalınlığı (piksel)','point.weight','number',style.point.weight,0,12,.5],
+   ['Nokta kenar görünürlüğü (0–1)','point.opacity','number',style.point.opacity,0,1,.05],
+   ['Nokta iç saydamlığı (0 = boş)','point.fillOpacity','number',style.point.fillOpacity,0,1,.05]
+  ]],
+  ['Çizgiler',[
+   ['Çizgi rengi','line.color','color',style.line.color],
+   ['Çizgi kalınlığı (piksel)','line.weight','number',style.line.weight,.5,20,.5],
+   ['Çizgi görünürlüğü (0–1)','line.opacity','number',style.line.opacity,0,1,.05]
+  ]],
+  ['Alanlar / poligonlar',[
+   ['Dış çizgi rengi','polygon.color','color',style.polygon.color],
+   ['Dış çizgi kalınlığı (piksel)','polygon.weight','number',style.polygon.weight,0,20,.5],
+   ['Dış çizgi görünürlüğü (0–1)','polygon.opacity','number',style.polygon.opacity,0,1,.05],
+   ['İç dolgu rengi','polygon.fillColor','color',style.polygon.fillColor],
+   ['İç dolgu görünürlüğü (0 = tamamen saydam)','polygon.fillOpacity','number',style.polygon.fillOpacity,0,1,.05]
+  ]]
+ ];
+ const body='<form id="layerStyleForm"><p>Bu ayarlar katmanın tüm nokta, çizgi ve alanlarına ayrı ayrı uygulanır. Alanın ortasını boş bırakmak için <b>İç dolgu görünürlüğü = 0</b> seçin.</p>'+
+ sections.map(([title,fields])=>'<fieldset class="styleGroup"><legend>'+title+'</legend><div class="styleFields">'+
+ fields.map(([label,name,type,value,min,max,step])=>styleField(label,name,type,value,min,max,step)).join('')+
+ '</div></fieldset>').join('')+
+ '<div class="actions"><button type="button" data-action="layer-style-reset" data-id="'+esc(id)+'">Varsayılana dön</button><button class="primary" type="submit">Stili kaydet</button></div></form>';
+ modal('Katman görünümü · '+layer.name,body);
+ $('layerStyleForm').onsubmit=guard(async event=>{
+  event.preventDefault();
+  const raw=Object.fromEntries(new FormData(event.currentTarget));
+  const changes={point:{},line:{},polygon:{}};
+  for(const [key,val] of Object.entries(raw)){
+   const [type,field]=key.split('.');
+   if(type in changes&&field)changes[type][field]=val;
+  }
+  const updated=normalizeLayerStyle(changes,layer.color||defaults);
+  await api('layer',{...layer,style:updated});
+  $('modal').close();
+  await refresh();
+  toast('Katman stili kaydedildi.');
+ });
+}
+function drawMap(){pointLayer.clearLayers();for(const r of filtered().filter(r=>r.lat!=null)){const marker=L.circleMarker([r.lat,r.lon],{radius:r.parentId?5:8,color:r.conflict?'#b66c2c':'#294b35',fillColor:'#b7d992',fillOpacity:.9}).addTo(pointLayer);marker.bindTooltip(r.title);marker.on('click',()=>{selectedPoint=r.id;mapPanels.detail=true;updateMapWorkspace();$('mapDetail').innerHTML='<h3>'+esc(r.title)+'</h3><p>'+esc(r.project)+'</p><p>'+esc(r.note)+'</p><div class="photos">'+r.photos.slice(0,2).map(p=>'<img src="'+photoUrl(p)+'" alt="">').join('')+'</div><div class="actions">'+buttons([['detail','Aç',r.id],['edit','Düzenle',r.id],['visit','＋ Ziyaret',r.id]])+'</div>'})}for(const o of overlays)o.remove();overlays=[];const masks=maskChoices();for(const l of state.layers){if(l.visible===false)continue;if(l.kind==='index')overlays.push(L.geoJSON(l.data,{style:f=>l.style?geometryStyle(f.geometry,l):{color:'#b58c3a',weight:2,fillOpacity:.03}}).addTo(map));if(l.kind==='raster'){const mask=l.clip?masks.find(m=>m.id===l.maskId)?.feature:null;overlays.push(rasterLayer(l,mask).addTo(map))}if(l.kind==='vector')overlays.push(L.geoJSON(l.data,{style:f=>geometryStyle(f.geometry,l),pointToLayer:(f,ll)=>L.circleMarker(ll,geometryStyle(f.geometry,l)),onEachFeature:(f,layer)=>{const p=f.properties||{};layer.bindPopup('<b>'+esc(p.name||p.title||'Öğe')+'</b>'+(p.folder?'<p>'+esc(p.folder)+'</p>':'')+(p.description?'<p>'+esc(p.description)+'</p>':'')+Object.entries(p.attributes||{}).map(([k,v])=>'<div><b>'+esc(k)+':</b> '+esc(v)+'</div>').join(''))}}).addTo(map))}
+$('layers').innerHTML='<h3>Katmanlar</h3><button data-action="reference">Asi hazır katmanları</button><p><small>Paftalar yerel arşivdedir; telefona gönderilmez.</small></p>'+state.layers.map(l=>'<div class="layer"><label><input type="checkbox" data-layer-visible="'+esc(l.id)+'" '+(l.visible!==false?'checked':'')+'> '+esc(l.name)+'</label>'+(l.maskMissing?'<p>İndeks kaldırıldı. Yeni sınır seçip katmanı yeniden açın.</p>':'')+(l.kind==='raster'?'<label>Saydamlık<input type="range" min="0" max="1" step="0.05" value="'+(l.opacity??.8)+'" data-layer-opacity="'+l.id+'"></label><label><input type="checkbox" data-layer-clip="'+l.id+'" '+(l.clip?'checked':'')+'> İndeks sınırına göre göster</label><select data-layer-mask="'+l.id+'"><option value="">İndeks poligonu seçin</option>'+masks.map(m=>'<option value="'+m.id+'" '+(m.id===l.maskId?'selected':'')+'>'+esc(m.name)+'</option>').join('')+'</select>':'')+'<div class="actions">'+buttons([['layer-zoom','Yaklaş',l.id],...(l.kind==='vector'||l.kind==='index'?[['layer-style','Renk / çizim stili',l.id]]:[]),['layer-front','Üste al',l.id],['layer-delete','Kaldır',l.id]])+'</div></div>').join('')}
 function drawMeasure(){measureLayer.clearLayers();if(!measurement.length)return;measurement.forEach(p=>L.circleMarker([p[1],p[0]],{radius:4}).addTo(measureLayer));if(measurement.length<2)return;const line=L.polyline(measurement.map(p=>[p[1],p[0]]),{color:'#d9762f'}).addTo(measureLayer);let label=turf.length(turf.lineString(measurement),{units:'kilometers'}).toFixed(3)+' km';if(measureMode==='area'&&measurement.length>=3){L.polygon(measurement.map(p=>[p[1],p[0]]),{color:'#d9762f'}).addTo(measureLayer);label=(turf.area(turf.polygon([[...measurement,measurement[0]]]))/10000).toFixed(3)+' ha'}$('mapInfo').textContent='Yaklaşık ölçüm: '+label+' · Yeni köşe için haritaya tıklayın.'}
 async function saveIndex(data,name){
  if(data.type!=='FeatureCollection'||!data.features?.length||data.features.some(f=>!['Polygon','MultiPolygon'].includes(f.geometry?.type)))throw Error('İndeks poligonlardan oluşmalı');
@@ -161,6 +214,16 @@ const actions={
  'qr-start':startQR,'qr-stop':()=>{receiver?.close();receiver=null;render()},json:()=>$('jsonFile').click(),legacy:async()=>{const d=await api('legacy');if(d)importChooser(d)},
  pafta:()=>$('kmzFile').click(),index:()=>$('indexFile').click(),
  'layer-delete':async id=>{if(confirm('Katman kaldırılsın mı? Bu indeksle kırpılan paftalar, yeni indeks seçilene kadar gizlenecek. Önceki yedekler korunur.')){await api('layer',{id,remove:true});await refresh()}},'layer-front':async id=>{await api('layer',{...state.layers.find(l=>l.id===id),front:true});await refresh()},
+ 'layer-style':id=>openLayerStyleEditor(id),
+ 'layer-style-reset':async id=>{
+  const l=state.layers.find(layer=>layer.id===id);
+  if(!l)return;
+  const {style,...rest}=l;
+  await api('layer',rest);
+  $('modal').close();
+  await refresh();
+  toast('Varsayılan katman renkleri geri geldi.');
+ },
  'layer-zoom':id=>{const l=state.layers.find(l=>l.id===id);if(l.quad)map.fitBounds(l.quad.map(([lon,lat])=>[lat,lon]));else map.fitBounds(L.geoJSON(l.data).getBounds())},
  'map-return':()=>go('overview'),
  'map-sidebar':()=>toggleMapPanel('menu'),
