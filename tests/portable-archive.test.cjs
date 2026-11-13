@@ -6,6 +6,7 @@ const fsp=require('node:fs/promises');
 const path=require('node:path');
 const os=require('node:os');
 const crypto=require('node:crypto');
+const {pathToFileURL}=require('node:url');
 const root=path.resolve(process.argv[2]||'desktop-source/app');
 const {exportPortable,importPortable}=require(path.join(root,'electron/portable-archive.cjs'));
 const {unzipSync}=require(path.join(root,'app/vendor/fflate.js'));
@@ -75,6 +76,47 @@ const run=async()=>{
   destination.state.records[0].note='Different local data, must never overwrite!';
   await assert.rejects(importPortable(destination,archive),/çakışıyor/);
   assert.equal(destination.state.records[0].note,'Different local data, must never overwrite!');
+  // Interoperability: same ZIP must cross desktop/web boundaries exactly.
+  const webDir=path.join(tmp,'browser-modules');
+  await fsp.mkdir(webDir);
+  await fsp.writeFile(path.join(webDir,'package.json'),'{"type":"module"}');
+  for(const name of ['atlas-standard.js','atlas-archive-adapter.js'])
+    await fsp.copyFile(path.join(process.cwd(),'web-integration',name),path.join(webDir,name));
+  const standard=await import(pathToFileURL(path.join(webDir,'atlas-standard.js')).href);
+  const browser=await import(pathToFileURL(path.join(webDir,'atlas-archive-adapter.js')).href);
+  assert.equal(standard.normalizeLayerStyle(layer.style).polygon.fillOpacity,0);
+  assert.equal(standard.geometryStyle({type:'Polygon'},layer).fillOpacity,0);
+  assert.equal(standard.geometryStyle({type:'LineString'},{
+    style:{line:{color:'#abcdef',weight:7,opacity:.6}}}).weight,7);
+  assert.equal(standard.geometryStyle({type:'Point'},{
+    style:{point:{radius:12,fillColor:'#123abc'}}}).radius,12);
+  const fflate=require(path.join(root,'app/vendor/fflate.js'));
+  const desktopInBrowser=await browser.readArchive(
+    new Blob([await fsp.readFile(archive)],{type:'application/zip'}),{fflate});
+  assert.equal(desktopInBrowser.state.records[0].title,record.title);
+  assert.equal(desktopInBrowser.assets.size,1);
+  const webZip=await browser.exportArchive({
+    state,
+    appVersion:'web-test',
+    getAsset:async requested=>requested===ref?new Blob([raw],{type:'image/jpeg'}):null,
+    fflate
+  });
+  const webPath=path.join(tmp,'from-web.atlas.zip');
+  await fsp.writeFile(webPath,Buffer.from(await webZip.arrayBuffer()));
+  const webDestDir=path.join(tmp,'from-web-assets');
+  await fsp.mkdir(webDestDir);
+  const webDest={
+    state:{version:1,projects:[],records:[],layers:[],settings:{theme:'light'},trash:[],history:[]},
+    assetFile:id=>path.join(webDestDir,id),
+    run:async fn=>fn(),
+    commit:async next=>{webDest.state=next}
+  };
+  const webImported=await importPortable(webDest,webPath);
+  assert.equal(webImported.newRecords,2);
+  assert.equal(webImported.newLayers,1);
+  assert.equal(webDest.state.layers[0].style.polygon.fillOpacity,0);
+  assert.deepEqual(await fsp.readFile(path.join(webDestDir,ref)),raw);
+  console.log('PASS: desktop ZIP -> web, web ZIP -> desktop, style interoperability');
   console.log('PASS: portable ZIP export, SHA-256, Turkish names, parent visits, styles, no history/secrets, safe merge');
  }finally{await fsp.rm(tmp,{recursive:true,force:true})}
 };
