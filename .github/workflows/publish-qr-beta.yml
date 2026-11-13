@@ -79,7 +79,12 @@ jobs:
               checks=directory/'SHA256SUMS.txt'
               notice=directory/'ONCE-OKU.txt'
               assert package.is_file() and package.stat().st_size>minimum, name
-              assert checks.is_file() and notice.is_file(), name
+              assert checks.is_file(), 'Missing SHA256SUMS: '+name
+              if not notice.is_file():
+                  with ZipFile(package) as bundled:
+                      assert 'ONCE-OKU.txt' in bundled.namelist(), 'No embedded usage notes: '+name
+                      notice.write_bytes(bundled.read('ONCE-OKU.txt'))
+              assert notice.is_file(), 'Missing usage notes: '+name
               records={}
               for line in checks.read_text(encoding='utf-8-sig').splitlines():
                   parts=line.strip().split(None,1)
