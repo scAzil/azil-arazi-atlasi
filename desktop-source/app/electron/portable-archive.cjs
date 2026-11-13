@@ -54,7 +54,7 @@ function checkState(state){
   const ids=new Set(),parents=new Map();
   for(const r of state.records){
     if(!isValidId(r.id)||ids.has(r.id)||typeof r.title!=='string'||
-       typeof r.project!=='string'||!Array.isArray(r.photos)||
+       typeof r.project!=='string'||!Number.isFinite(Date.parse(r.date))||!Array.isArray(r.photos)||
        (r.lat!=null&&(!Number.isFinite(r.lat)||Math.abs(r.lat)>90))||
        (r.lon!=null&&(!Number.isFinite(r.lon)||Math.abs(r.lon)>180)))
       throw Error('Arşivde kayıt kimliği/koordinatı hatalı.');
@@ -188,7 +188,18 @@ async function importPortable(store,filename){
   const stat=await fsp.stat(filename);
   if(stat.size>LIMIT_ARCHIVE)throw Error('Bu ZIP, bellekli içe aktarma sınırı olan 450 MB üzerindedir.');
   const zipped=await fsp.readFile(filename);
-  const unzipped=unzipSync(new Uint8Array(zipped));
+  let predicted=0;
+  const unzipped=unzipSync(new Uint8Array(zipped),{filter:item=>{
+    const name=item.name;
+    if(name.includes('\\')||name.includes('..')||name.startsWith('/')||
+       (name!=='manifest.json'&&name!=='data/state.json'&&!ZIP_ASSET.test(name)))
+      throw Error('Arşivde güvenli olmayan dosya yolu var.');
+    if(!Number.isSafeInteger(item.originalSize)||item.originalSize<0)
+      throw Error('Arşivde geçersiz dosya boyutu var.');
+    predicted+=item.originalSize;
+    if(predicted>LIMIT_UNPACKED)throw Error('ZIP açılmış boyut sınırını aşıyor.');
+    return true;
+  }});
   const keys=Object.keys(unzipped);
   let total=0;
   for(const [name,data] of Object.entries(unzipped)){
@@ -242,6 +253,8 @@ async function importPortable(store,filename){
       await fsp.writeFile(dest,Buffer.from(unzipped[a.path]),{flag:'wx'}).catch(e=>{
         if(e.code!=='EEXIST')throw e;
       });
+      if(await hashFile(dest)!==a.sha256)
+        throw Error('Mevcut varlık dosyası SHA-256 uyuşmuyor: '+path.basename(dest));
     }
     await store.commit(next);
     return {projects:incoming.projects.length,records:incoming.records.length,
