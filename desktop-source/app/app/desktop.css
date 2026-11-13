@@ -38,3 +38,33 @@ body.map-workspace .leaflet-bottom{z-index:800}
 .styleFields label{font-size:.9rem;margin:4px 0}
 .styleFields input[type=color]{height:44px;width:100%;padding:3px;cursor:pointer}
 .styleFields input[type=number]{width:100%}
+
+
+/* AZiL offline help center: two-pane searchable guide */
+.atlasHelpRoot{width:min(100%,1050px);max-width:100%;font-size:.98rem}
+.atlasHelpRoot>label{display:block;margin-bottom:6px;font-weight:700}
+#atlasHelpSearch{display:block;width:100%;margin:0 0 14px;padding:11px 13px}
+.atlasHelpLayout{display:grid;grid-template-columns:minmax(195px,245px) minmax(0,1fr);gap:15px;min-height:300px}
+.atlasHelpNav{display:flex;flex-direction:column;gap:6px;min-width:0;max-height:min(65vh,680px);overflow-y:auto;border-right:1px solid var(--line);padding-right:9px}
+.atlasHelpNav button{display:flex;flex-direction:column;text-align:left;align-items:stretch;gap:3px;padding:12px;border:1px solid transparent;border-radius:9px;background:transparent;cursor:pointer;line-height:1.3}
+.atlasHelpNav button[aria-current=page]{background:var(--panel);border-color:var(--line)}
+.atlasHelpNav button small{font-size:.78rem;opacity:.72;white-space:normal}
+.atlasHelpArticle{min-width:0;max-height:min(65vh,680px);overflow-y:auto;padding:0 8px}
+.atlasHelpArticle h2{font-size:1.35rem;margin:.1rem 0 .7rem}
+.atlasHelpArticle h3{font-size:1.05rem;margin:1rem 0 .4rem}
+.atlasHelpArticle p{line-height:1.65;margin:.55rem 0}
+.atlasHelpArticle code{display:inline-block;white-space:normal;overflow-wrap:anywhere;font-size:.85rem}
+.atlasHelpLead{opacity:.75;font-size:1rem}
+.atlasHelpSection{padding:10px 0 15px;border-bottom:1px solid var(--line)}
+.atlasHelpResult{width:100%;display:flex;flex-direction:column;text-align:left;align-items:flex-start;margin:7px 0;padding:12px;border:1px solid var(--line);border-radius:8px}
+.atlasHelpResult small{opacity:.7}
+.atlasHelpShortcut>div{display:grid;grid-template-columns:minmax(130px,180px) minmax(0,1fr);gap:12px;padding:10px;border-bottom:1px solid var(--line)}
+.atlasHelpShortcut kbd{font-family:ui-monospace,monospace;background:var(--panel);padding:5px 8px;border-radius:6px}
+.atlasHelpPre{white-space:pre-wrap;overflow-wrap:anywhere;max-width:100%;padding:12px;border-radius:7px;background:var(--panel)}
+.atlasHelpFooter{margin:12px 0 0;font-size:.79rem;opacity:.72}
+@media(max-width:760px){
+ .atlasHelpLayout{display:block}
+ .atlasHelpNav{flex-direction:row;flex-wrap:nowrap;border:0;border-bottom:1px solid var(--line);max-height:none;overflow-x:auto;padding-bottom:8px;margin-bottom:12px}
+ .atlasHelpNav button{flex:0 0 145px}
+ .atlasHelpArticle{max-height:55vh;padding:0}
+}
