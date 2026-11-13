@@ -35,6 +35,8 @@ jobs:
           node --check "desktop-source/app/electron/portable-archive.cjs"
           node --check "desktop-source/app/app/atlas-standard.js"
           node --check "web-integration/atlas-archive-adapter.js"
+          node --check "desktop-source/app/app/startup-diagnostics.js"
+          if ($LASTEXITCODE -ne 0) { throw "Node syntax preflight failed" }
       - name: Fetch and verify original v1.0.3 Windows package
         shell: pwsh
         env:
@@ -61,7 +63,7 @@ jobs:
           }
           $edits = @("app/index.html", "app/desktop.css", "app/desktop.js",
                      "electron/main.cjs", "electron/preload.cjs", "electron/portable-archive.cjs",
-                     "app/atlas-standard.js", "package.json")
+                     "app/atlas-standard.js", "app/startup-diagnostics.js", "package.json")
           foreach ($file in $edits) {
             Copy-Item -LiteralPath "desktop-source/app/$file" -Destination "_app/$file" -Force
           }
@@ -71,7 +73,9 @@ jobs:
             }
           }
           python "tests/check_v1_1.py" "_app"
+          if ($LASTEXITCODE -ne 0) { throw "UI structural test failed" }
           node "tests/portable-archive.test.cjs" "_app"
+          if ($LASTEXITCODE -ne 0) { throw "Portable archive test failed" }
           node "tests/renderer-startup-smoke.cjs" "_app/app"
           if ($LASTEXITCODE -ne 0) { throw "Renderer browser startup smoke test failed" }
           npx --no-install asar pack "_app" "_base/Arazi-Atlasi/resources/app.asar"
@@ -90,7 +94,7 @@ jobs:
         run: |
           New-Item -ItemType Directory -Force -Path "_dist" | Out-Null
           @'
-          AZiL Arazi Atlası v1.1.0-beta.2 - Windows x64
+          AZiL Arazi Atlası v1.1.0-beta.3 - Windows x64
           
           This is a TEST BUILD, not the official release.
           Extract the complete ZIP to a NEW folder.
@@ -113,16 +117,16 @@ jobs:
           into the original website app, not the tr.gg iframe wrapper.
           Phone-to-PC QR transfer remains one way.
           '@ | Set-Content "_base/BETA-ONCE-OKU.txt" -Encoding UTF8
-          Compress-Archive -Path "_base/*" -DestinationPath "_dist/Arazi-Atlasi-1.1.0-beta.1-Windows-x64.zip" -CompressionLevel Optimal -Force
-          $zip = "_dist/Arazi-Atlasi-1.1.0-beta.1-Windows-x64.zip"
+          Compress-Archive -Path "_base/*" -DestinationPath "_dist/Arazi-Atlasi-1.1.0-beta.3-Windows-x64.zip" -CompressionLevel Optimal -Force
+          $zip = "_dist/Arazi-Atlasi-1.1.0-beta.3-Windows-x64.zip"
           $hash = (Get-FileHash -LiteralPath $zip -Algorithm SHA256).Hash
-          "$hash  Arazi-Atlasi-1.1.0-beta.1-Windows-x64.zip" | Set-Content "_dist/SHA256SUMS.txt" -Encoding ascii
-          python -c "import zipfile; p=r'_dist/Arazi-Atlasi-1.1.0-beta.1-Windows-x64.zip'; z=zipfile.ZipFile(p); assert z.testzip() is None; assert any(n.endswith('/resources/app.asar') for n in z.namelist()); print('ZIP integrity OK; files:',len(z.namelist()))"
+          "$hash  Arazi-Atlasi-1.1.0-beta.3-Windows-x64.zip" | Set-Content "_dist/SHA256SUMS.txt" -Encoding ascii
+          python -c "import zipfile; p=r'_dist/Arazi-Atlasi-1.1.0-beta.3-Windows-x64.zip'; z=zipfile.ZipFile(p); assert z.testzip() is None; assert any(n.endswith('/resources/app.asar') for n in z.namelist()); print('ZIP integrity OK; files:',len(z.namelist()))"
       - name: Upload test version for Windows user validation
         uses: actions/upload-artifact@v4
         with:
-          name: Arazi-Atlasi-v1.1.0-beta.2-Windows-x64
+          name: Arazi-Atlasi-v1.1.0-beta.3-Windows-x64
           path: |
-            _dist/Arazi-Atlasi-1.1.0-beta.1-Windows-x64.zip
+            _dist/Arazi-Atlasi-1.1.0-beta.3-Windows-x64.zip
             _dist/SHA256SUMS.txt
           if-no-files-found: error

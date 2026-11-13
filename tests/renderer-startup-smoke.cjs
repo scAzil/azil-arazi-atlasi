@@ -41,7 +41,7 @@ async function test(){
    window.desktop={
     call:async(command)=>{
      if(command==='state')return {
-      version:'1.1.0-beta.2',archivePath:'C:\\Atlas\\Arsiv',backupPath:'C:\\Atlas\\Yedekler',
+      version:'1.1.0-beta.3',archivePath:'C:\\Atlas\\Arsiv',backupPath:'C:\\Atlas\\Yedekler',
       settings:{theme:'light',font:15,dense:false,basemap:'osm',photoMax:'original'},
       projects:[],records:[],trash:[],layers:[],history:[],lastBackup:null,warning:null
      };
