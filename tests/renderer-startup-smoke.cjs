@@ -14,7 +14,7 @@ const server=http.createServer(async(req,res)=>{
   const data=await fs.readFile(full);
   res.setHeader('Content-Type',mime[path.extname(full)]||'application/octet-stream');
   res.end(data);
- }catch(e){res.writeHead(404);res.end('missing')}
+ }catch(e){console.error('RESOURCE_404',req.url,e.code||e.message);res.writeHead(404);res.end('missing')}
 });
 async function test(){
  await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
@@ -23,7 +23,9 @@ async function test(){
  try{
   const page=await browser.newPage();
   const errors=[];
-  page.on('pageerror',e=>errors.push('pageerror: '+e.stack));
+  page.on('pageerror',e=>errors.push('pageerror: '+(e.stack||e.message||String(e))+' / '+JSON.stringify({name:e.name,message:e.message})));
+  page.on('response',resp=>{if(resp.status()>=400)console.error('HTTP_FAILURE',resp.status(),resp.url())});
+  page.on('requestfailed',req=>console.error('REQUEST_FAILED',req.url(),req.failure()?.errorText));
   page.on('console',msg=>{if(msg.type()==='error')errors.push('console error: '+msg.text())});
   await page.addInitScript(()=>{
    window.desktop={
