@@ -7,6 +7,8 @@ on:
       - '.github/workflows/build-v1.1.yml'
       - 'desktop-source/app/**'
       - 'tests/**'
+      - 'web-integration/**'
+      - 'docs/**'
   workflow_dispatch:
 
 permissions:
@@ -30,6 +32,9 @@ jobs:
           node --check "desktop-source/app/app/desktop.js"
           node --check "desktop-source/app/electron/main.cjs"
           node --check "desktop-source/app/electron/preload.cjs"
+          node --check "desktop-source/app/electron/portable-archive.cjs"
+          node --check "desktop-source/app/app/atlas-standard.js"
+          node --check "web-integration/atlas-archive-adapter.js"
       - name: Fetch and verify original v1.0.3 Windows package
         shell: pwsh
         env:
@@ -55,7 +60,8 @@ jobs:
             $baseline[$file] = (Get-FileHash -LiteralPath "_app/$file" -Algorithm SHA256).Hash
           }
           $edits = @("app/index.html", "app/desktop.css", "app/desktop.js",
-                     "electron/main.cjs", "electron/preload.cjs", "package.json")
+                     "electron/main.cjs", "electron/preload.cjs", "electron/portable-archive.cjs",
+                     "app/atlas-standard.js", "package.json")
           foreach ($file in $edits) {
             Copy-Item -LiteralPath "desktop-source/app/$file" -Destination "_app/$file" -Force
           }
@@ -65,12 +71,14 @@ jobs:
             }
           }
           python "tests/check_v1_1.py" "_app"
+          node "tests/portable-archive.test.cjs" "_app"
           npx --no-install asar pack "_app" "_base/Arazi-Atlasi/resources/app.asar"
       - name: Validate repackaged Electron source
         shell: pwsh
         run: |
           npx --no-install asar extract "_base/Arazi-Atlasi/resources/app.asar" "_verify"
           python "tests/check_v1_1.py" "_verify"
+          node "tests/portable-archive.test.cjs" "_verify"
           node --check "_verify/app/desktop.js"
           node --check "_verify/electron/main.cjs"
           node --check "_verify/electron/preload.cjs"
@@ -80,7 +88,7 @@ jobs:
         run: |
           New-Item -ItemType Directory -Force -Path "_dist" | Out-Null
           @'
-          AZiL Arazi Atlası v1.1.0-beta.1 - Windows x64
+          AZiL Arazi Atlası v1.1.0-beta.2 - Windows x64
           
           This is a TEST BUILD, not the official release.
           Extract the complete ZIP to a NEW folder.
@@ -94,7 +102,14 @@ jobs:
           Map: fills app window. Toggle Menu / Tools / Layers / Detail from top bar.
           'Tam ekran' / F11 switches the native window to fullscreen.
           New settings: photo resolution 1280/1920/original and storage summary.
-          Phone-to-PC QR transfer remains one way; original JSON backups preserved.
+          New KML/KMZ layer styles for point, line and polygon. For polygon
+          interior transparency set fill opacity to 0; outline stays visible.
+          Archive export/import: AZIL-ATLAS/1 portable ZIP for CURRENT data only.
+          Old restore / external restore / AppData import dialogs are removed.
+          Existing Arsiv, Yedekler and deleted-data files are NOT auto-deleted.
+          No account or cloud sync is used. Web support requires integration
+          into the original website app, not the tr.gg iframe wrapper.
+          Phone-to-PC QR transfer remains one way.
           '@ | Set-Content "_base/BETA-ONCE-OKU.txt" -Encoding UTF8
           Compress-Archive -Path "_base/*" -DestinationPath "_dist/Arazi-Atlasi-1.1.0-beta.1-Windows-x64.zip" -CompressionLevel Optimal -Force
           $zip = "_dist/Arazi-Atlasi-1.1.0-beta.1-Windows-x64.zip"
@@ -104,7 +119,7 @@ jobs:
       - name: Upload test version for Windows user validation
         uses: actions/upload-artifact@v4
         with:
-          name: Arazi-Atlasi-v1.1.0-beta.1-Windows-x64
+          name: Arazi-Atlasi-v1.1.0-beta.2-Windows-x64
           path: |
             _dist/Arazi-Atlasi-1.1.0-beta.1-Windows-x64.zip
             _dist/SHA256SUMS.txt
