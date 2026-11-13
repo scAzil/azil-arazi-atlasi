@@ -74,7 +74,7 @@ const server=http.createServer(async(req,res)=>{
   await page.locator('[data-laction="style"]').waitFor({timeout:10000});
   await page.locator('[data-laction="style"]').click();
   await page.locator('#styleOpacity').fill('0');
-  await page.locator('#styleForm button[type="submit"]').click();
+  await page.locator('#styleForm button.primary').click();
   const style=await page.evaluate(()=>JSON.parse(window.AndroidAtlas.getState()).layers[0].style);
   assert.equal(style.polygon.fillOpacity,0);
   await page.locator('[data-tab="archive"]').click();
