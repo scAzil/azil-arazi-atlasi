@@ -79,6 +79,66 @@ const server=http.createServer(async(req,res)=>{
   assert.equal(style.polygon.fillOpacity,0);
   await page.locator('[data-tab="archive"]').click();
   assert.ok((await page.locator('#view-archive').innerText()).includes('AZIL-ATLAS/1'));
+  // Exercise the exact Windows QR invitation and a complete fake desktop
+  // begin -> ready -> binary SHA-256 -> receipt -> done handshake.
+  const qr=await page.evaluate(async()=>{
+    const api=await import('/qr-transfer.js');
+    const token='a'.repeat(64);
+    const invitation={app:'DSD',version:'1.1',scope:'all',sessionId:token,desktopTransfer:1};
+    const encoded=btoa(JSON.stringify(invitation)).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
+    const parsed=api.readDesktopInvite('https://arazi-atlasi.chic-cabin-0509.chatgpt.site/#sync='+encoded);
+    let rejected=false;
+    try{api.readDesktopInvite('https://evil.invalid/#sync='+encoded)}catch{rejected=true}
+    const root={id:'parent1',title:'Ana nokta',project:'Örnek Proje',date:'2026-11-13T00:00:00Z',
+      parentId:null,photos:[{ref:'b'.repeat(64)+'.jpg',name:'Fotoğraf'}]};
+    const visit={id:'visit1',title:'Ziyaret',project:'Örnek Proje',
+      date:'2026-11-13T01:00:00Z',parentId:'parent1',photos:[]};
+    const batch=api.collectRecords({records:[visit,root]},['visit1']);
+    const sent=[],receipts=[],control=[],status=[];
+    let room,ctl,data;
+    const fakeJoin=(config,roomId)=>{
+      ctl={send:async function(message){
+        control.push(message.kind);
+        if(message.kind==='begin')queueMicrotask(()=>ctl.onMessage({kind:'ready'},{peerId:'desktop'}));
+      },onMessage:null};
+      data={send:async(raw,opts)=>{
+        const str=new TextDecoder().decode(raw);
+        sent.push({message:JSON.parse(str),hash:opts.metadata.hash});
+        const actual=Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',raw)),
+          x=>x.toString(16).padStart(2,'0')).join('');
+        receipts.push(actual===opts.metadata.hash);
+        queueMicrotask(()=>ctl.onMessage({kind:'receipt',key:JSON.parse(str).key,
+          hash:opts.metadata.hash,status:'added'},{peerId:'desktop'}));
+      }};
+      room={onPeerJoin:null,onPeerLeave:null,leave(){},
+        makeAction:id=>id==='atlas-desk-ctl'?ctl:data};
+      queueMicrotask(()=>{room.onPeerJoin('desktop');
+        ctl.onMessage({kind:'hello',protocol:1},{peerId:'desktop'})});
+      return room;
+    };
+    const sender=api.createQrSender({joinRoomImpl:fakeJoin,
+      onStatus:s=>status.push(s),
+      fetchFn:async()=>({ok:true,arrayBuffer:async()=>new Uint8Array([255,216,255,217]).buffer})});
+    sender.connect(token);
+    await new Promise(done=>setTimeout(done,20));
+    const ready=sender.ready;
+    const result=await sender.transfer(batch);
+    sender.disconnect();
+    return {parsed:parsed.token===token,rejected,order:batch.map(x=>x.id),ready,
+      result,sent,receipts,control};
+  });
+  assert.equal(qr.parsed,true);
+  assert.equal(qr.rejected,true);
+  assert.deepEqual(qr.order,['parent1','visit1']);
+  assert.equal(qr.ready,true);
+  assert.deepEqual(qr.control,['begin','done']);
+  assert.deepEqual(qr.receipts,[true,true]);
+  assert.equal(qr.sent.length,2);
+  assert.equal(qr.sent[0].message.record.photos.length,1);
+  assert.ok(qr.sent[0].message.record.photos[0].data.startsWith('data:image/jpeg;base64,'));
+  assert.ok(!('ref' in qr.sent[0].message.record.photos[0]));
+  assert.equal(qr.result.completed,2);
+  console.log('PASS: Windows QR invite validation, parent-first transfer, photos, SHA-256 and receipts');
   assert.equal(errors.length,0,errors.join('\n'));
   console.log('PASS: Android mobile renderer, offline Leaflet, projects, points, KML styling and archive UI');
  }finally{await browser.close();server.close()}
