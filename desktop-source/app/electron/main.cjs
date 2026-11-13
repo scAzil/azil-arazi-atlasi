@@ -1,6 +1,7 @@
 'use strict';
 const {app,BrowserWindow,protocol,ipcMain,dialog,shell,Menu}=require('electron'),fs=require('node:fs/promises'),path=require('node:path');
 const {Store}=require('./store.cjs');
+const {exportPortable,importPortable}=require('./portable-archive.cjs');
 const root=app.isPackaged?path.dirname(process.execPath):path.resolve(__dirname,'..');
 const legacy=path.join(app.getPath('appData'),'AZiL-Arazi-Atlasi');
 app.setPath('userData',path.join(root,'Arsiv','.Profil'));
@@ -26,12 +27,32 @@ const handlers={
    return {assetsCount:count,assetsBytes:bytes,archiveBytes:archive,backupsCount:backups.length};
  },
  'repair-folders':()=>store.repairMirrors(),'save':r=>store.save(r),'import':({record,restore})=>store.importRecord(record,restore),'remove':ids=>store.remove(ids),'remove-project':name=>store.remove(store.state.records.filter(r=>r.project===name).map(r=>r.id),name),'restore':id=>store.restore(id),'purge':ids=>store.purge(ids),'history':id=>store.historyRestore(id),'settings':v=>store.settings(v),'project':({name,newName})=>store.project(name,newName),'layer':v=>store.layer(v),
+ 'archive-export':async()=>{
+   const suggested='AZiL-Atlas-'+new Date().toISOString().slice(0,10)+'.atlas.zip';
+   const r=await dialog.showSaveDialog(win,{
+      title:'AZiL Atlas arşivini dışa aktar (güncel kayıtlar)',
+      defaultPath:suggested,filters:[{name:'AZiL Atlas taşınabilir arşiv',extensions:['zip']}]});
+   if(r.canceled)return null;
+   return exportPortable(store,r.filePath,app.getVersion());
+ },
+ 'archive-import':async()=>{
+   const r=await dialog.showOpenDialog(win,{
+     title:'AZiL Atlas taşınabilir arşiv dosyasını seçin',
+     properties:['openFile'],
+     filters:[{name:'AZiL Atlas arşiv (*.atlas.zip)',extensions:['zip']}]});
+   if(r.canceled)return null;
+   const choice=await dialog.showMessageBox(win,{
+     type:'question',
+     title:'Güncel arşiv dosyasını içe aktar',
+     message:'Arşivdeki güncel noktalar, ziyaretler, katmanlar ve fotoğraflar içe aktarılsın mı?',
+     detail:'Mevcut kayıtlar silinmez veya üzerine yazılmaz. Aynı kimlikle farklı içerik varsa işlem durdurulur. Bu işlem eski tarihli yedek sürümüne dönmek değildir.',
+     buttons:['Vazgeç','İçe aktar'],defaultId:0,cancelId:0,noLink:true
+   });
+   if(choice.response!==1)return null;
+   return importPortable(store,r.filePaths[0]);
+ },
  'backup':reason=>store.run(()=>store.backup(['manual','before-import'].includes(reason)?reason:'manual')),
- 'external-restore':async()=>{const r=await dialog.showOpenDialog(win,{title:'Harici yedek JSON dosyası (yanında Varliklar klasörü bulunmalı)',properties:['openFile'],filters:[{name:'Arşiv yedeği',extensions:['json']}]});if(r.canceled)return false;return store.restoreBackup(path.basename(r.filePaths[0]),path.dirname(r.filePaths[0]))},
- 'backups':()=>store.listBackups(),'restore-backup':f=>store.restoreBackup(f),
- 'external-backup':async()=>{const r=await dialog.showOpenDialog(win,{title:'Yedek alınacak klasör',properties:['openDirectory','createDirectory']});if(r.canceled)return null;return store.run(()=>store.backup('manual',r.filePaths[0]))},
  'open-folder':async recordId=>{let dir=store.dir;if(recordId){const r=store.state.records.find(r=>r.id===recordId);if(!r)throw Error('Nokta yok');dir=store.recordDir(r)}return shell.openPath(dir)},
- 'legacy':async()=>{const picked=await dialog.showOpenDialog(win,{title:'Eski sürümün Saha-Kayitlari.json veya telefon JSON yedeğini seçin',defaultPath:path.join(legacy,'Yedekler'),filters:[{name:'JSON yedeği',extensions:['json']}],properties:['openFile']});if(picked.canceled)return null;const st=await fs.stat(picked.filePaths[0]);if(st.size>300*1024*1024)throw Error('Dosya 300 MB sınırını aşıyor');return JSON.parse(await fs.readFile(picked.filePaths[0],'utf8'))},
  'external':async url=>{const u=new URL(url);if(u.protocol!=='https:'||!['sbncifci.tr.gg','books.google.com','play.google.com','www.google.com','yandex.com','yandex.com.tr','developers.google.com','developers.arcgis.com'].includes(u.hostname))throw Error('Bağlantıya izin verilmedi');return shell.openExternal(u.href)},
  'export':async({name,text})=>{if(typeof text!=='string'||text.length>350*1024*1024)throw Error('Dosya çok büyük');const r=await dialog.showSaveDialog(win,{defaultPath:path.basename(name)});if(r.canceled)return false;await fs.writeFile(r.filePath,text,'utf8');return true},
  'pdf':async()=>{const r=await dialog.showSaveDialog(win,{defaultPath:'Saha-Raporu.pdf',filters:[{name:'PDF',extensions:['pdf']}]});if(r.canceled)return false;await fs.writeFile(r.filePath,await win.webContents.printToPDF({printBackground:true,pageSize:'A4',preferCSSPageSize:true}));return true}
@@ -40,7 +61,7 @@ for(const [name,fn] of Object.entries(handlers))ipcMain.handle('atlas:'+name,(e,
 win=new BrowserWindow({width:1450,height:920,minWidth:980,minHeight:650,icon:path.join(__dirname,'../app/icon.png'),title:'Arazi Atlası',webPreferences:{preload:path.join(__dirname,'preload.cjs'),contextIsolation:true,nodeIntegration:false,sandbox:true}});
 win.webContents.setWindowOpenHandler(()=>({action:'deny'}));win.webContents.on('will-navigate',(e,url)=>{if(!url.startsWith('atlas://app/'))e.preventDefault()});win.webContents.session.setPermissionRequestHandler((w,p,cb)=>cb(false));
 const cmd=c=>()=>win.webContents.send('atlas:menu',c);
-Menu.setApplicationMenu(Menu.buildFromTemplate([{label:'Dosya',submenu:[{label:'Yeni proje',accelerator:'Ctrl+Shift+N',click:cmd('project')},{label:'Yeni nokta',accelerator:'Ctrl+N',click:cmd('new')},{label:'Telefondan aktar',click:cmd('transfer')},{label:'Yedekle',accelerator:'Ctrl+Shift+S',click:cmd('backup')},{type:'separator'},{label:'Çıkış',role:'quit'}]},{label:'Düzenle',submenu:[{label:'Geri al',role:'undo'},{label:'Yinele',role:'redo'},{type:'separator'},{label:'Kes',role:'cut'},{label:'Kopyala',role:'copy'},{label:'Yapıştır',role:'paste'},{label:'Tümünü seç',role:'selectAll'}]},{label:'Görünüm',submenu:[{label:'Yakınlaştır',role:'zoomIn'},{label:'Uzaklaştır',role:'zoomOut'},{label:'Gerçek boyut',role:'resetZoom'},{label:'Tam ekran',role:'togglefullscreen'},{label:'Tema ve görünüm',click:cmd('settings')}]},{label:'Araçlar',submenu:[{label:'Harita ve paftalar',click:cmd('map')},{label:'Raporlar',click:cmd('reports')},{label:'Çöp Kutusu',click:cmd('trash')}]},{label:'Yardım',submenu:[{label:'Hakkında',click:cmd('about')},{label:'Arşiv klasörü',click:()=>shell.openPath(store.dir)},{label:'Hata inceleme',role:'toggleDevTools'}]}]));
+Menu.setApplicationMenu(Menu.buildFromTemplate([{label:'Dosya',submenu:[{label:'Yeni proje',accelerator:'Ctrl+Shift+N',click:cmd('project')},{label:'Yeni nokta',accelerator:'Ctrl+N',click:cmd('new')},{label:'Telefondan aktar',click:cmd('transfer')},{label:'Arşivi dışa aktar',accelerator:'Ctrl+Shift+S',click:cmd('archive-export')},{type:'separator'},{label:'Çıkış',role:'quit'}]},{label:'Düzenle',submenu:[{label:'Geri al',role:'undo'},{label:'Yinele',role:'redo'},{type:'separator'},{label:'Kes',role:'cut'},{label:'Kopyala',role:'copy'},{label:'Yapıştır',role:'paste'},{label:'Tümünü seç',role:'selectAll'}]},{label:'Görünüm',submenu:[{label:'Yakınlaştır',role:'zoomIn'},{label:'Uzaklaştır',role:'zoomOut'},{label:'Gerçek boyut',role:'resetZoom'},{label:'Tam ekran',role:'togglefullscreen'},{label:'Tema ve görünüm',click:cmd('settings')}]},{label:'Araçlar',submenu:[{label:'Harita ve paftalar',click:cmd('map')},{label:'Raporlar',click:cmd('reports')},{label:'Çöp Kutusu',click:cmd('trash')}]},{label:'Yardım',submenu:[{label:'Hakkında',click:cmd('about')},{label:'Arşiv klasörü',click:()=>shell.openPath(store.dir)},{label:'Hata inceleme',role:'toggleDevTools'}]}]));
 win.on('close',e=>{if(closing)return;e.preventDefault();win.webContents.executeJavaScript('Boolean(window.atlasDirty)').then(async dirty=>{if(dirty&&(await dialog.showMessageBox(win,{type:'question',buttons:['Düzenlemeye dön','Kaydetmeden kapat'],defaultId:0,cancelId:0,message:'Kaydedilmemiş değişiklikler var.'})).response===0)return;await store.queue;closing=true;win.close()}).catch(()=>{closing=true;win.close()})});
 await win.loadURL('atlas://app/index.html');
 }).catch(e=>{dialog.showErrorBox('Arşiv açılamadı',e.message+'\nProgramı yazılabilir bir klasöre taşıyın. Arşiv başka konuma taşınmadı.');app.quit()});
