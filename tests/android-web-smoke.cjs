@@ -45,6 +45,19 @@ const server=http.createServer(async(req,res)=>{
     },
     addPhoto:()=>good(),
     requestLocation:()=>{},
+    connectLan:value=>{
+      window.__lanInvite=value;
+      queueMicrotask(()=>window.AZILQr?.lanConnected({address:'192.168.50.5'}));
+    },
+    sendLan:ids=>{
+      const selected=JSON.parse(ids);
+      window.__lanSent=selected;
+      queueMicrotask(()=>{
+        window.AZILQr?.lanProgress({done:selected.length,total:selected.length,status:'added'});
+        window.AZILQr?.lanComplete({total:selected.length,warnings:0});
+      });
+    },
+    clearLan:()=>{},
     requestExport:()=>{},
     requestImport:()=>{}
    };
@@ -79,6 +92,19 @@ const server=http.createServer(async(req,res)=>{
   assert.equal(style.polygon.fillOpacity,0);
   await page.locator('[data-tab="archive"]').click();
   assert.ok((await page.locator('#view-archive').innerText()).includes('AZIL-ATLAS/1'));
+  // The new local LAN QR is detected before the WebRTC fallback.
+  await page.locator('[data-tab="transfer"]').click();
+  await page.evaluate(()=>window.AZILQr.onScanResult('azil-atlas://lan?ip=192.168.50.5&port=47321&token='+ 'a'.repeat(64)));
+  await page.waitForTimeout(20);
+  assert.ok((await page.locator('#qrStatus').innerText()).includes('Bilgisayara yerel ağdan bağlandı'));
+  await page.locator('#sendQrBtn').click();
+  await page.waitForTimeout(20);
+  const lan=await page.evaluate(()=>({url:window.__lanInvite,ids:window.__lanSent}));
+  assert.ok(lan.url.startsWith('azil-atlas://lan?'));
+  assert.deepEqual(lan.ids,['mock-point-1']);
+  assert.ok((await page.locator('#qrReceipt').innerText()).includes('Bütün kayıtlar Windows tarafından onaylandı'));
+  console.log('PASS: LAN QR scan routing, native handshake and selected records UI');
+
   // Exercise the exact Windows QR invitation and a complete fake desktop
   // begin -> ready -> binary SHA-256 -> receipt -> done handshake.
   const qr=await page.evaluate(async()=>{
