@@ -58,6 +58,7 @@ jobs:
               assert z.testzip() is None
           print('Android APK validated:',p.stat().st_size,'bytes')
           PY
+      - uses: browser-actions/setup-chrome@v1
       - name: Real Chromium field UI smoke
         shell: bash
         run: |
