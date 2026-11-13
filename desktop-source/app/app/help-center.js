@@ -79,7 +79,7 @@ export const HELP_TROUBLESHOOT=[
  ]}
 ];
 export const HELP_RELEASES=[
- {version:'1.1.0-beta.4',label:'Yardım Merkezi geliştirmesi',items:[
+ {version:'1.1.0',label:'Kararlı sürüm · Yardım Merkezi ve masaüstü yenilikleri',items:[
   'Çevrimdışı, aranabilir kullanım kılavuzu ve konuya göre yardım.',
   'Program Hakkında, sürüm notları, sorun giderme ve gerçek klavye kısayolları.',
   'Kişisel veri içermeyen tanılama kopyalama ve salt okunur arşiv sağlık özeti.'
@@ -130,7 +130,7 @@ export function helpLayout(active='guide'){
 }
 
 export function helpArticle(topic,opts={}){
- const version=opts.version||'1.1.0-beta.4';
+ const version=opts.version||'1.1.0';
  if(topic==='about')return '<h2>AZiL Arazi Atlası</h2><p class="atlasHelpLead">Sahadan kalıcı arşive.</p>'+
    '<p>Geliştirme: <b>Şaban Çifçi (AZiL)</b>. Uygulama sürümü: <b>'+escapeHTML(version)+'</b>.</p>'+
    '<p>Windows için yerel CBS ve saha kaydı uygulaması. Proje, nokta, ziyaret, fotoğraf, harita, KML/KMZ pafta ve raporları bir araya getirir. Çalışma verileri cihazda tutulur; hesap ve bulut servisi kullanılmaz.</p>'+

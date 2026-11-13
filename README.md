@@ -2,18 +2,18 @@
 
 Arazi, CBS, proje/ziyaret ve saha fotoğraflarını yerel arşivde birleştiren AZiL masaüstü uygulaması.
 
-## Kararlı sürüm (mevcut)
+## Önceki kararlı sürüm
 
 **[Arazi Atlası v1.0.3 — Windows x64](https://github.com/scAzil/azil-arazi-atlasi/releases/tag/v1.0.3)**
 
 Bu sürüm kullanıcı verilerini `Arsiv` ve `Yedekler` klasörlerinde tutar. ZIP'i tamamen çıkarın; `Arazi Atlasi.exe` dosyasını `resources` klasöründen ayırmayın.
 
-## v1.1.0-beta.4 — Harita Çalışma Alanı (test sürümü)
+## v1.1.0 — Harita Çalışma Alanı ve Yardım Merkezi
 
-[Geliştirme dalı](https://github.com/scAzil/azil-arazi-atlasi/tree/feat/atlas-v1.1-map-workspace) · [Windows test derlemeleri (Actions)](https://github.com/scAzil/azil-arazi-atlasi/actions)
+**[v1.1.0 GitHub Release (Windows x64)](https://github.com/scAzil/azil-arazi-atlasi/releases/tag/v1.1.0)** · [Önceki v1.0.3](https://github.com/scAzil/azil-arazi-atlasi/releases/tag/v1.0.3)
 
 Yenilikler:
-- **Yardım Merkezi (beta.4):** F1 ve üst Yardım menüsünden açılan çevrimdışı, aranabilir rehber; Program Hakkında, kullanım kılavuzu, sürüm notları, sorun giderme, yerel veri klasörleri, tanılama ve kısayollar.
+- **Yardım Merkezi:** F1 ve üst Yardım menüsünden açılan çevrimdışı, aranabilir rehber; Program Hakkında, kullanım kılavuzu, sürüm notları, sorun giderme, yerel veri klasörleri, tanılama ve kısayollar.
 - **Veri gizliliği:** Tanılama panoya yalnızca sürüm/sistem/nesne sayılarını kopyalar; koordinatlar, fotoğraflar, kayıt adları ve API anahtarları hariç tutulur. Arşiv sağlığı salt okunur denetlenir.
 - **Açılış düzeltmesi (beta.3):** Beta.2'de kullanıcı arayüzünü durduran JavaScript sözdizimi hatası giderildi. Başlangıç hataları artık alt durum çubuğunda gösterilir; ayrıca Chromium ile açılış testi eklendi.
 - **KML/KMZ çizim stili:** Nokta, çizgi ve poligonlar için ayrı renk/kalınlık ve dolgu seçenekleri. Alanın içini tamamen boş bırakmak için dolgu saydamlığı = 0.
@@ -31,9 +31,9 @@ Yenilikler:
 
 Bu geliştirme, yayımlanmış Windows **v1.0.3** paketinden geri çıkarılan Electron kaynak dosyalarını temel alır. Özgün `app.asar` üzerinden yalnızca değiştirilen kod dosyaları güncellenerek test paketi hazırlanır. Eski kaynak ZIP/Release korunur.
 
-**Beta sürümü saha verilerinin tek kopyası üzerinde denemeyin.** Önce mevcut `Arsiv` ve `Yedekler` klasörlerinizi başka bir konuma kopyalayın. Arşivler uygulama klasöründe olduğundan, beta paketini başka klasöre açarsanız eski kayıtlar kendiliğinden gelmez. Veri klasörlerini taşımadan önce yedek alın.
+**Her sürüm geçişinde saha verilerinin tek kopyası üzerinde işlem yapmayın.** Önce mevcut `Arsiv` ve `Yedekler` klasörlerinizi başka bir konuma kopyalayın. Arşivler uygulama klasöründe olduğundan, yeni paketi başka klasöre açarsanız eski kayıtlar kendiliğinden gelmez. Veri klasörlerini taşımadan önce yedek alın.
 
-Arayüz test paketi doğrulanıp Windows'ta gerçek deneme yapıldıktan sonra ayrı bir v1.1 Release hazırlanacaktır. GitHub PR test dalı şu anda kararlı v1.0.3 sürümünün yerini almaz.
+Windows beta.4 sürümü kullanıcı tarafından test edildi; kararlı v1.1.0, yalnızca sürüm bilgisinin düzenlenmesiyle aynı işlevleri sunar. Windows derleme ve otomatik testler GitHub Actions üzerinde yürütülür.
 
 ## Ortak arşiv standardı
 

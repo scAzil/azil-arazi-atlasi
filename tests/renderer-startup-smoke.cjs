@@ -40,11 +40,11 @@ async function test(){
   await page.addInitScript(()=>{
    window.desktop={
     call:async(command)=>{
-     if(command==='help-diagnostics')return {application:'AZiL Arazi Atlası',version:'1.1.0-beta.4',platform:'win32',architecture:'x64',electron:'34.0',recordCount:0,warningPresent:false};
+     if(command==='help-diagnostics')return {application:'AZiL Arazi Atlası',version:'1.1.0',platform:'win32',architecture:'x64',electron:'34.0',recordCount:0,warningPresent:false};
      if(command==='help-copy-diagnostics')return true;
      if(command==='help-archive-health')return {projects:0,records:0,visits:0,assets:0,missingParents:0,missingAssets:0,partial:false};
      if(command==='state')return {
-      version:'1.1.0-beta.4',archivePath:'C:\\Atlas\\Arsiv',backupPath:'C:\\Atlas\\Yedekler',
+      version:'1.1.0',archivePath:'C:\\Atlas\\Arsiv',backupPath:'C:\\Atlas\\Yedekler',
       settings:{theme:'light',font:15,dense:false,basemap:'osm',photoMax:'original'},
       projects:[],records:[],trash:[],layers:[],history:[],lastBackup:null,warning:null
      };
@@ -80,7 +80,7 @@ async function test(){
   assert.ok((await page.locator('#atlasHelpArticle').innerText()).includes('Salt okunur arşiv kontrolü'));
   await page.locator('.atlasHelpNav [data-help-topic="diagnostics"]').click();
   await page.locator('[data-help-action="diagnostics-load"]').click();
-  assert.ok((await page.locator('#atlasHelpArticle').innerText()).includes('1.1.0-beta.4'));
+  assert.ok((await page.locator('#atlasHelpArticle').innerText()).includes('1.1.0'));
   await page.locator('[data-help-action="diagnostics-copy"]').click();
   await page.locator('.atlasHelpNav [data-help-topic="shortcuts"]').click();
   assert.ok((await page.locator('#atlasHelpArticle').innerText()).includes('F11'));

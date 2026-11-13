@@ -1,4 +1,4 @@
-name: Build Arazi Atlasi v1.1 beta Windows x64
+name: Build Arazi Atlasi v1.1.0 Windows x64
 
 on:
   push:
@@ -102,9 +102,9 @@ jobs:
         run: |
           New-Item -ItemType Directory -Force -Path "_dist" | Out-Null
           @'
-          AZiL Arazi Atlası v1.1.0-beta.4 - Windows x64
+          AZiL Arazi Atlası v1.1.0 - Windows x64
           
-          This is a TEST BUILD, not the official release.
+          Build candidate for the v1.1.0 stable GitHub Release.
           Extract the complete ZIP to a NEW folder.
           Run 'Arazi Atlasi.exe' alongside all supplied resources and DLL files.
           
@@ -126,17 +126,17 @@ jobs:
           New offline searchable help, About, release notes, troubleshooting,
           read-only archive health and privacy-safe diagnostics.
           Phone-to-PC QR transfer remains one way.
-          '@ | Set-Content "_base/BETA-ONCE-OKU.txt" -Encoding UTF8
-          Compress-Archive -Path "_base/*" -DestinationPath "_dist/Arazi-Atlasi-1.1.0-beta.4-Windows-x64.zip" -CompressionLevel Optimal -Force
-          $zip = "_dist/Arazi-Atlasi-1.1.0-beta.4-Windows-x64.zip"
+          '@ | Set-Content "_base/ONCE-OKU.txt" -Encoding UTF8
+          Compress-Archive -Path "_base/*" -DestinationPath "_dist/Arazi-Atlasi-1.1.0-Windows-x64.zip" -CompressionLevel Optimal -Force
+          $zip = "_dist/Arazi-Atlasi-1.1.0-Windows-x64.zip"
           $hash = (Get-FileHash -LiteralPath $zip -Algorithm SHA256).Hash
-          "$hash  Arazi-Atlasi-1.1.0-beta.4-Windows-x64.zip" | Set-Content "_dist/SHA256SUMS.txt" -Encoding ascii
-          python -c "import zipfile; p=r'_dist/Arazi-Atlasi-1.1.0-beta.4-Windows-x64.zip'; z=zipfile.ZipFile(p); assert z.testzip() is None; assert any(n.endswith('/resources/app.asar') for n in z.namelist()); print('ZIP integrity OK; files:',len(z.namelist()))"
+          "$hash  Arazi-Atlasi-1.1.0-Windows-x64.zip" | Set-Content "_dist/SHA256SUMS.txt" -Encoding ascii
+          python -c "import zipfile; p=r'_dist/Arazi-Atlasi-1.1.0-Windows-x64.zip'; z=zipfile.ZipFile(p); assert z.testzip() is None; assert any(n.endswith('/resources/app.asar') for n in z.namelist()); print('ZIP integrity OK; files:',len(z.namelist()))"
       - name: Upload test version for Windows user validation
         uses: actions/upload-artifact@v4
         with:
-          name: Arazi-Atlasi-v1.1.0-beta.4-Windows-x64
+          name: Arazi-Atlasi-v1.1.0-Windows-x64
           path: |
-            _dist/Arazi-Atlasi-1.1.0-beta.4-Windows-x64.zip
+            _dist/Arazi-Atlasi-1.1.0-Windows-x64.zip
             _dist/SHA256SUMS.txt
           if-no-files-found: error

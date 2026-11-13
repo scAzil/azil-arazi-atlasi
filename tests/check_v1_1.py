@@ -56,7 +56,7 @@ def test(app):
     assert "QR" in js and "startReceiver" in js, "Phone-to-PC transfer must survive"
     assert "function loadKMZ" in js and "function drawMeasure" in js
     assert pkg["main"] == "electron/main.cjs"
-    assert pkg["version"] == "1.1.0-beta.4"
+    assert pkg["version"] == "1.1.0"
     assert (root / "app/pafta.js").is_file()
     assert (root / "app/transfer.js").is_file()
     assert (root / "electron/store.cjs").is_file()
