@@ -50,7 +50,8 @@ async function test(){
      };
      return null;
     },
-    onMenu:fn=>{window.__atlasTestMenu=fn}
+    onMenu:fn=>{window.__atlasTestMenu=fn},
+    onLan:fn=>{window.__atlasTestLan=fn}
    };
   });
   await page.goto('http://127.0.0.1:'+port+'/index.html',{waitUntil:'load'});
