@@ -67,7 +67,7 @@ const handlers={
  },
  'backup':reason=>store.run(()=>store.backup(['manual','before-import'].includes(reason)?reason:'manual')),
  'open-folder':async recordId=>{let dir=store.dir;if(recordId){const r=store.state.records.find(r=>r.id===recordId);if(!r)throw Error('Nokta yok');dir=store.recordDir(r)}return shell.openPath(dir)},
- 'external':async url=>{const u=new URL(url);if(u.protocol!=='https:'||!['sbncifci.tr.gg','books.google.com','play.google.com','www.google.com','yandex.com','yandex.com.tr','developers.google.com','developers.arcgis.com'].includes(u.hostname))throw Error('Bağlantıya izin verilmedi');return shell.openExternal(u.href)},
+ 'external':async url=>{const u=new URL(url);if(u.protocol!=='https:'||!['sbncifci.tr.gg','books.google.com','play.google.com','www.google.com','yandex.com','yandex.com.tr','developers.google.com','developers.arcgis.com','github.com'].includes(u.hostname))throw Error('Bağlantıya izin verilmedi');return shell.openExternal(u.href)},
  'export':async({name,text})=>{if(typeof text!=='string'||text.length>350*1024*1024)throw Error('Dosya çok büyük');const r=await dialog.showSaveDialog(win,{defaultPath:path.basename(name)});if(r.canceled)return false;await fs.writeFile(r.filePath,text,'utf8');return true},
  'pdf':async()=>{const r=await dialog.showSaveDialog(win,{defaultPath:'Saha-Raporu.pdf',filters:[{name:'PDF',extensions:['pdf']}]});if(r.canceled)return false;await fs.writeFile(r.filePath,await win.webContents.printToPDF({printBackground:true,pageSize:'A4',preferCSSPageSize:true}));return true}
 };
