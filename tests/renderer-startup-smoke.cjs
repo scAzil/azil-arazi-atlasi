@@ -23,7 +23,17 @@ async function test(){
  try{
   const page=await browser.newPage();
   const errors=[];
+  const cdp=await page.context().newCDPSession(page);
+  await cdp.send('Runtime.enable');
+  cdp.on('Runtime.exceptionThrown',({exceptionDetails:e})=>{
+    console.error('CDP_EXCEPTION',JSON.stringify({
+      url:e.url,line:e.lineNumber+1,column:e.columnNumber+1,text:e.text,
+      details:e.exception?.description,
+      frames:e.stackTrace?.callFrames?.slice(0,5)
+    }));
+  });
   page.on('pageerror',e=>errors.push('pageerror: '+(e.stack||e.message||String(e))+' / '+JSON.stringify({name:e.name,message:e.message})));
+  page.on('console',msg=>{if(msg.type()==='error')console.error('CONSOLE_LOCATION',msg.location(),msg.text())});
   page.on('response',resp=>{if(resp.status()>=400)console.error('HTTP_FAILURE',resp.status(),resp.url())});
   page.on('requestfailed',req=>console.error('REQUEST_FAILED',req.url(),req.failure()?.errorText));
   page.on('console',msg=>{if(msg.type()==='error')errors.push('console error: '+msg.text())});
