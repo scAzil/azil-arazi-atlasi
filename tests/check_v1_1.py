@@ -44,10 +44,10 @@ def test(app):
         "body.map-workspace #layers", "body.map-workspace #mapDetail"
     ):
         assert text in css, f"Missing map layout rule: {text}"
-    for method in ("updateMapWorkspace", "toggleMapPanel", "preparePhoto", "mapUI"):
+    for method in ("updateMapWorkspace", "toggleMapPanel", "preparePhoto", "mapUI", "openLayerStyleEditor", "exportAtlas", "importAtlas"):
         assert "function " + method in js or "async function " + method in js, method
     for action in ("'map-return'", "'map-sidebar'", "'map-tools'", "'map-fullscreen'",
-                   "'toggle-layers'", "'toggle-detail'", "'storage-info'"):
+                   "'toggle-layers'", "'toggle-detail'", "'storage-info'", "'layer-style'", "'archive-export'", "'archive-import'"):
         assert action in js, action
     assert "map.invalidateSize" in js
     assert "photoMax" in js and "1280" in js and "1920" in js
@@ -56,10 +56,19 @@ def test(app):
     assert "QR" in js and "startReceiver" in js, "Phone-to-PC transfer must survive"
     assert "function loadKMZ" in js and "function drawMeasure" in js
     assert pkg["main"] == "electron/main.cjs"
-    assert pkg["version"] == "1.1.0-beta.1"
+    assert pkg["version"] == "1.1.0-beta.2"
     assert (root / "app/pafta.js").is_file()
     assert (root / "app/transfer.js").is_file()
     assert (root / "electron/store.cjs").is_file()
+    assert (root / "electron/portable-archive.cjs").is_file()
+    assert (root / "app/atlas-standard.js").is_file()
+    assert "function openLayerStyleEditor" in js
+    assert "geometryStyle(f.geometry,l)" in js
+    assert "Yedekten geri yükle" not in js
+    assert "Harici yedekten dön" not in js
+    assert "Eski AppData yedeğini al" not in js
+    assert "archive-export" in main and "archive-import" in main
+    assert "archive-export" in preload and "archive-import" in preload
     print("PASS: fullscreen map, panel toggles, photo presets, storage, QR, KMZ, archives, version")
 
 if __name__ == "__main__":
