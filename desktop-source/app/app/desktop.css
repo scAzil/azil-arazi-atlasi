@@ -30,3 +30,11 @@ body.map-workspace .leaflet-bottom{z-index:800}
 }
 
 @media print{#sidebar,header,#status,#toast,.noPrint{display:none!important}main{margin:0;width:100%;padding:0}.panel{border:none}.report-record{break-inside:avoid}body{background:white;color:black}#mapView{display:none!important}@page{size:A4;margin:15mm}}
+
+/* KML / GeoJSON katman çizim stili: renk, kalınlık ve iç dolgu */
+.styleGroup{border:1px solid var(--line);border-radius:10px;margin:12px 0;padding:12px}
+.styleGroup legend{font-weight:700;color:var(--ink);padding:0 8px}
+.styleFields{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:8px 15px}
+.styleFields label{font-size:.9rem;margin:4px 0}
+.styleFields input[type=color]{height:44px;width:100%;padding:3px;cursor:pointer}
+.styleFields input[type=number]{width:100%}
