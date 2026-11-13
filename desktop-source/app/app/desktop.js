@@ -1,6 +1,7 @@
 import {readMapFile,rasterLayer} from './pafta.js';
 import {startReceiver} from './transfer.js';
 import {normalizeLayerStyle,geometryStyle} from './atlas-standard.js';
+import {HELP_TOPICS,helpLayout,helpArticle,searchResultsHTML} from './help-center.js';
 const $=id=>document.getElementById(id),api=(n,a)=>window.desktop.call(n,a),esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 let state,view='overview',map,basemap,pointLayer,overlays=[],receiver,editPhotos=[],filter={q:'',project:'',type:'',from:'',to:''},measurement=[],measureMode=null,measureLayer,selectedPoint=null,reportIds=null;
 window.atlasDirty=false;
@@ -68,6 +69,53 @@ const toast=msg=>{$('toast').textContent=msg;$('toast').hidden=false;clearTimeou
 const guard=fn=>async(...args)=>{try{return await fn(...args)}catch(e){if(e.cancelled)return;toast(e.message||String(e));console.error(e)}};
 async function refresh(){state=await api('state');document.body.classList.toggle('dark',state.settings.theme==='dark');document.body.classList.toggle('dense',!!state.settings.dense);document.documentElement.style.fontSize=(state.settings.font||15)+'px';$('status').textContent=state.archivePath+' · Son yedek: '+(state.lastBackup?new Date(state.lastBackup.at).toLocaleString('tr-TR'):'yok')+' · WGS84 / UTM 37N';render();if(state.warning)toast(state.warning)}
 function modal(title,html){discardDraft();clearPicker();$('modal').innerHTML='<div class="dialogHead"><h2>'+esc(title)+'</h2><button data-action="close">Kapat</button></div>'+html;if(!$('modal').open)$('modal').showModal()}
+async function openHelpCenter(topic='guide',initialSearch=''){
+ const valid=HELP_TOPICS.some(item=>item.id===topic)?topic:'guide';
+ modal('AZiL Arazi Atlası · Yardım Merkezi',helpLayout(valid));
+ const root=$('atlasHelpRoot'),search=$('atlasHelpSearch'),article=$('atlasHelpArticle');
+ let active=valid,diagnostics=null,health=null;
+ const draw=()=>{
+  root.querySelectorAll('.atlasHelpNav [data-help-topic]').forEach(button=>
+    button.setAttribute('aria-current',button.dataset.helpTopic===active?'page':'false'));
+  article.innerHTML=search.value.trim()?searchResultsHTML(search.value.trim()):
+    helpArticle(active,{version:state.version,archivePath:state.archivePath,
+                        backupPath:state.backupPath,diagnostics,health});
+  article.scrollTop=0;
+ };
+ search.value=initialSearch;
+ search.addEventListener('input',draw);
+ root.addEventListener('click',guard(async e=>{
+  const button=e.target.closest('[data-help-topic],[data-help-action]');
+  if(!button)return;
+  e.preventDefault();
+  if(button.dataset.helpTopic){
+    active=button.dataset.helpTopic;
+    search.value='';
+    draw();
+    return;
+  }
+  const key=button.dataset.helpAction;
+  if(key==='archive-folder')await api('open-folder');
+  else if(key==='backup-folder')await api('help-open-backups');
+  else if(key==='health'){
+    const old=button.textContent;button.disabled=true;button.textContent='Kontrol ediliyor…';
+    try{health=await api('help-archive-health');draw();}
+    finally{if(button.isConnected){button.disabled=false;button.textContent=old}}
+  }
+  else if(key==='diagnostics-load'){
+    const info=await api('help-diagnostics');
+    diagnostics=Object.entries(info).map(([key,value])=>key+': '+value).join('\\n');
+    draw();
+  }
+  else if(key==='diagnostics-copy'){
+    await api('help-copy-diagnostics');
+    toast('Kişisel veri içermeyen tanılama özeti panoya kopyalandı.');
+  }
+  else if(key==='website')await api('external','https://sbncifci.tr.gg/');
+  else if(key==='github')await api('external','https://github.com/scAzil/azil-arazi-atlasi');
+ }));
+ draw();
+}
 function closeModal(){if(window.atlasDirty&&!confirm('Kaydedilmemiş değişikliklerden vazgeçilsin mi?'))return;window.atlasDirty=false;clearPicker();$('modal').close()}
 function go(v){if(window.atlasDirty&&!confirm('Kaydedilmemiş değişikliklerden vazgeçilsin mi?'))return;window.atlasDirty=false;clearPicker();$('modal').close();if(v!=='map')mapPanels.menu=false;view=v;render()}
 function filtered(){return state.records.filter(r=>(!filter.q||[r.title,r.project,r.note,r.type].join(' ').toLocaleLowerCase('tr').includes(filter.q.toLocaleLowerCase('tr')))&&(!filter.project||r.project===filter.project)&&(!filter.type||r.type===filter.type)&&(!filter.from||localDay(r.date)>=filter.from)&&(!filter.to||localDay(r.date)<=filter.to))}
@@ -203,6 +251,8 @@ function importChooser(data){if(data.app!=='Dijital Saha Defteri'||!Array.isArra
  }finally{button.disabled=false}})}
 
 const actions={
+ 'help-map':()=>openHelpCenter('guide','KML'),
+ 'help-data':()=>openHelpCenter('data'),
  'clear-filter':()=>{filter={q:'',project:'',type:'',from:'',to:''};render()},'repair-folders':async()=>{await api('repair-folders');await refresh();toast('Fotoğraf klasörleri arşivle eşitlendi.')},nav:go,close:closeModal,about,'archive-export':exportAtlas,'archive-import':importAtlas,folder:id=>api('open-folder',id),external:id=>api('external',id),
  project:()=>projectDialog(),
  'project-open':p=>{filter.project=p;go('records')},'project-new-point':p=>edit(null,p),
@@ -246,7 +296,7 @@ document.addEventListener('input',e=>{if(e.target.id==='search'){filter.q=e.targ
 $('jsonFile').onchange=guard(async e=>{try{const f=e.target.files[0];if(!f)return;if(f.size>300*1024*1024)throw Error('JSON en fazla 300 MB');importChooser(JSON.parse(await f.text()))}finally{e.target.value=''}});
 $('kmzFile').onchange=guard(async e=>{try{await loadKMZ([...e.target.files])}finally{e.target.value=''}});$('indexFile').onchange=guard(async e=>{try{if(e.target.files[0])await loadIndex(e.target.files[0])}finally{e.target.value=''}});
 $('newPoint').onclick=guard(()=>edit());$('quickImport').onclick=guard(()=>go('transfer'));$('quickBackup').onclick=guard(exportAtlas);$('profile').onclick=guard(about);$('modal').addEventListener('cancel',e=>{if(window.atlasDirty){e.preventDefault();closeModal()}});
-window.desktop.onMenu(guard(async c=>{if(c==='project')await actions.project();else if(c==='new')edit();else if(c==='archive-export')await exportAtlas();else if(c==='about')about();else go(c)}));
+window.desktop.onMenu(guard(async c=>{if(c==='project')await actions.project();else if(c==='new')edit();else if(c==='archive-export')await exportAtlas();else if(c==='about')about();else if(c.startsWith('help:'))await openHelpCenter(c.slice(5));else go(c)}));
 document.addEventListener('keydown',e=>{
  if(e.key!=='Escape'||view!=='map'||$('modal').open)return;
  for(const key of ['menu','tools','layers','detail']){
