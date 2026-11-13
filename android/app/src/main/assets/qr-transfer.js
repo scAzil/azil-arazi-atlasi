@@ -162,9 +162,9 @@ const selectionEl=document.getElementById('qrRecords');
 const sendBtn=document.getElementById('sendQrBtn');
 const progressEl=document.getElementById('qrProgress');
 const resultEl=document.getElementById('qrReceipt');
-let sender;
+let sender,qrMode='internet',lanReady=false,lanSending=false;
 sender=createQrSender({
-  onStatus:message=>{statusEl.textContent=message;if(sender)sendBtn.disabled=!sender.ready;},
+  onStatus:message=>{if(qrMode==='internet'){statusEl.textContent=message;if(sender)sendBtn.disabled=!sender.ready;}},
   onProgress:info=>{
     progressEl.max=info.total;progressEl.value=info.done;
     resultEl.textContent=info.done+' / '+info.total+' kayıt bilgisayar tarafından alındı.';
@@ -186,28 +186,70 @@ document.getElementById('scanQRBtn').onclick=()=>{
   if(window.AndroidAtlas?.scanDesktopQr)window.AndroidAtlas.scanDesktopQr();
   else statusEl.textContent='QR tarayıcı kullanılamıyor.';
 };
-document.getElementById('disconnectQrBtn').onclick=()=>sender.disconnect();
+document.getElementById('disconnectQrBtn').onclick=()=>{sender.disconnect();window.AndroidAtlas?.clearLan?.();lanReady=false;lanSending=false;sendBtn.disabled=true;statusEl.textContent='Bağlantı kapatıldı.';};
 document.getElementById('refreshQrBtn').onclick=renderSelection;
 document.getElementById('qrSelectAll').onchange=e=>{
   selectionEl.querySelectorAll('input[data-qr-record]').forEach(x=>x.checked=e.target.checked);
 };
 sendBtn.onclick=async()=>{
+  if(lanSending)return;
   sendBtn.disabled=true;resultEl.textContent='';
   try{
     const picked=[...selectionEl.querySelectorAll('input:checked')].map(x=>x.value);
     const list=collectRecords(window.AtlasField.getState(),picked);
+    if(qrMode==='lan'){
+      if(!lanReady)throw Error('Yerel ağ bağlantısı henüz kurulmadı.');
+      lanSending=true;
+      progressEl.max=list.length;progressEl.value=0;
+      statusEl.textContent='Yerel ağ üzerinden '+list.length+' kayıt gönderiliyor…';
+      window.AndroidAtlas.sendLan(JSON.stringify(list.map(item=>item.id)));
+      return;
+    }
     await sender.transfer(list);
   }catch(e){resultEl.textContent='Hata: '+e.message;}
-  finally{sendBtn.disabled=!sender.ready;}
+  finally{if(qrMode!=='lan'||!lanSending)sendBtn.disabled=qrMode==='lan'?!lanReady:!sender.ready;}
 };
 window.AZILQr={
   onScanResult(value){
-    try{
-      sender.connect(readDesktopInvite(value).token);
-      progressEl.value=0;resultEl.textContent='';
-    }catch(e){statusEl.textContent='QR hatası: '+e.message;}
+    progressEl.value=0;resultEl.textContent='';sendBtn.disabled=true;
+    if(/^azil-atlas:\/\/lan\?/i.test(String(value||''))){
+      qrMode='lan';lanReady=false;lanSending=false;
+      sender.disconnect();
+      statusEl.textContent='Yerel ağ bağlantısı kontrol ediliyor…';
+      try{window.AndroidAtlas.connectLan(String(value))}
+      catch(e){statusEl.textContent='Yerel QR hatası: '+e.message;}
+      return;
+    }
+    qrMode='internet';lanReady=false;lanSending=false;
+    window.AndroidAtlas?.clearLan?.();
+    try{sender.connect(readDesktopInvite(value).token);}
+    catch(e){statusEl.textContent='QR hatası: '+e.message;}
+  },
+  lanConnected(info){
+    if(qrMode!=='lan')return;
+    lanReady=true;lanSending=false;sendBtn.disabled=false;
+    statusEl.textContent='Bilgisayara yerel ağdan bağlandı ('+String(info?.address||'LAN')+'). Kayıtları seçip Gönder düğmesine basın.';
+  },
+  lanProgress(info){
+    if(qrMode!=='lan')return;
+    progressEl.max=info.total||1;progressEl.value=info.done||0;
+    resultEl.textContent=info.done+'/'+info.total+' kayıt Windows tarafından işlendi: '+info.status;
+  },
+  lanComplete(info){
+    if(qrMode!=='lan')return;
+    lanSending=false;sendBtn.disabled=!lanReady;
+    statusEl.textContent='Yerel aktarım tamamlandı: '+info.total+' kayıt.';
+    resultEl.textContent=info.warnings?
+      'Aktarım bitti, '+info.warnings+' kayıtta uyarı var. Windows sonuçlarını kontrol edin.':
+      'Bütün kayıtlar Windows tarafından onaylandı. Telefon kayıtları korunuyor.';
+  },
+  lanFailed(info){
+    if(qrMode!=='lan')return;
+    lanSending=false;lanReady=false;sendBtn.disabled=true;
+    statusEl.textContent='Yerel bağlantı hatası: '+String(info?.error||'Bilinmeyen hata');
+    resultEl.textContent='Windows QR ekranını yenileyip yeni kodu okutun. İki cihaz aynı Wi-Fi üzerinde olmalı; Windows Güvenlik Duvarında özel ağ izni gerekli olabilir.';
   },
   renderSelection,
-  disconnect:()=>sender.disconnect()
+  disconnect:()=>{sender.disconnect();window.AndroidAtlas?.clearLan?.();}
 };
 renderSelection();
