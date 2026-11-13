@@ -1,0 +1,178 @@
+name: Publish AZiL LAN QR Windows and Android betas
+
+on:
+  push:
+    branches: [feat/android-v0.1-offline-atlas]
+    paths:
+      - '.github/workflows/publish-qr-beta.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  actions: read
+
+jobs:
+  publish:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Verify both successful builds and unchanged application sources
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          for entry in \
+            '43367325787:12b09827d3383765a4a4b0f7bb81de5b6b6784e3:14010218973' \
+            '43367279825:6519ab34423a7523e5ec6ff7145bae36f3321371:14011386554'; do
+            IFS=: read -r run sha artifact <<< "$entry"
+            test "$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$run" --jq '.head_sha')" = "$sha"
+            test "$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$run" --jq '.conclusion')" = success
+            test "$(gh api "repos/$GITHUB_REPOSITORY/actions/artifacts/$artifact" --jq '.workflow_run.id')" = "$run"
+            test "$(gh api "repos/$GITHUB_REPOSITORY/actions/artifacts/$artifact" --jq '.expired')" = false
+            echo "Verified run: $run at $sha"
+          done
+
+          for sha in \
+            12b09827d3383765a4a4b0f7bb81de5b6b6784e3 \
+            6519ab34423a7523e5ec6ff7145bae36f3321371; do
+            differences="$(gh api "repos/$GITHUB_REPOSITORY/compare/$sha...$GITHUB_SHA" --jq '.files[].filename')"
+            if printf '%s\n' "$differences" | grep -E '^(android/|desktop-source/|tests/lan-receiver\.test\.cjs|tests/android-web-smoke\.cjs|\.github/workflows/(android-build|windows-lan-beta)\.yml)'; then
+              echo "Application code differs from tested build $sha"
+              exit 1
+            fi
+          done
+          echo "Tested sources unchanged."
+
+      - name: Download exact tested packages from GitHub Actions
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mkdir -p _release/windows _release/android
+          gh run download 43367325787 --repo "$GITHUB_REPOSITORY" \
+            --name Arazi-Atlasi-v1.1.1-beta.1-LAN-Windows-x64 --dir _release/windows
+          gh run download 43367279825 --repo "$GITHUB_REPOSITORY" \
+            --name AZiL-Arazi-Atlasi-Android-v0.1.0-beta.3 --dir _release/android
+          ls -lh _release/windows _release/android
+
+      - name: Verify SHA-256, ZIP integrity, and exclude private archive files
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          from hashlib import sha256
+          from zipfile import ZipFile
+
+          items=[
+            (Path('_release/windows'),'Arazi-Atlasi-1.1.1-beta.1-Windows-x64.zip',
+              100_000_000,{'Arazi-Atlasi/resources/app.asar','ONCE-OKU.txt'}),
+            (Path('_release/android'),'AZiL-Arazi-Atlasi-Android-v0.1.0-beta.3.apk',
+              1_000_000,{'assets/index.html','assets/qr-transfer.js','assets/vendor/trystero.js','classes.dex'})
+          ]
+          for directory,name,minimum,required in items:
+              package=directory/name
+              checks=directory/'SHA256SUMS.txt'
+              notice=directory/'ONCE-OKU.txt'
+              assert package.is_file() and package.stat().st_size>minimum, name
+              assert checks.is_file(), 'Missing SHA256SUMS: '+name
+              if not notice.is_file():
+                  with ZipFile(package) as bundled:
+                      assert 'ONCE-OKU.txt' in bundled.namelist(), 'No embedded usage notes: '+name
+                      notice.write_bytes(bundled.read('ONCE-OKU.txt'))
+              assert notice.is_file(), 'Missing usage notes: '+name
+              records={}
+              for line in checks.read_text(encoding='utf-8-sig').splitlines():
+                  parts=line.strip().split(None,1)
+                  if len(parts)==2:records[Path(parts[1].lstrip('*')).name]=parts[0].lower()
+              digest=sha256(package.read_bytes()).hexdigest()
+              assert digest==records.get(name),'SHA-256 mismatch: '+name
+              with ZipFile(package) as archive:
+                  names=set(archive.namelist())
+                  assert archive.testzip() is None,'Corrupt ZIP: '+name
+                  assert required<=names,'Missing required files: '+str(required-names)
+                  assert not any('/Arsiv/' in x or '/Yedekler/' in x for x in names),'Private archive embedded'
+                  assert not any(x.startswith('/') or '../' in x for x in names),'Unsafe ZIP entry'
+              (directory/'BUILD_PROVENANCE.txt').write_text(
+                 'AZiL paired LAN QR test release\n'+
+                 f'File: {name}\nSHA-256: {digest}\n'+
+                 'Windows tested run: https://github.com/scAzil/azil-arazi-atlasi/actions/runs/43367325787\n'+
+                 'Android tested run: https://github.com/scAzil/azil-arazi-atlasi/actions/runs/43367279825\n'+
+                 'Pre-release: real two-device transfer not yet confirmed.\n',
+                 encoding='utf-8')
+              print('PASS:',name,digest)
+          PY
+
+      - name: Publish Windows LAN QR v1.1.1-beta.1
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          if gh release view v1.1.1-beta.1 --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            echo "Windows pre-release exists; final verification will check its assets."
+          else
+            gh release create v1.1.1-beta.1 \
+              _release/windows/Arazi-Atlasi-1.1.1-beta.1-Windows-x64.zip \
+              _release/windows/SHA256SUMS.txt \
+              _release/windows/ONCE-OKU.txt \
+              _release/windows/BUILD_PROVENANCE.txt \
+              --repo "$GITHUB_REPOSITORY" \
+              --target "$GITHUB_SHA" \
+              --title "AZiL Arazi Atlası Windows v1.1.1-beta.1 — Yerel Wi-Fi QR" \
+              --notes-file RELEASE_NOTES_Windows_v1.1.1-beta.1.md \
+              --prerelease
+          fi
+
+      - name: Publish Android QR v0.1.0-beta.3
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          if gh release view android-v0.1.0-beta.3 --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            echo "Android pre-release exists; final verification will check its assets."
+          else
+            gh release create android-v0.1.0-beta.3 \
+              _release/android/AZiL-Arazi-Atlasi-Android-v0.1.0-beta.3.apk \
+              _release/android/SHA256SUMS.txt \
+              _release/android/ONCE-OKU.txt \
+              _release/android/BUILD_PROVENANCE.txt \
+              --repo "$GITHUB_REPOSITORY" \
+              --target "$GITHUB_SHA" \
+              --title "AZiL Arazi Atlası Android v0.1.0-beta.3 — Yerel Wi-Fi QR" \
+              --notes-file RELEASE_NOTES_Android_v0.1.0-beta.3.md \
+              --prerelease
+          fi
+
+      - name: Verify both public pre-releases and stable v1.1.0
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json,os,subprocess
+          repo=os.environ['GITHUB_REPOSITORY']
+          pairs=[
+             ('v1.1.1-beta.1','Arazi-Atlasi-1.1.1-beta.1-Windows-x64.zip',100_000_000),
+             ('android-v0.1.0-beta.3','AZiL-Arazi-Atlasi-Android-v0.1.0-beta.3.apk',1_000_000)
+          ]
+          def release(tag):
+              return json.loads(subprocess.check_output(
+                 ['gh','api',f'repos/{repo}/releases/tags/{tag}'],text=True))
+          for tag,filename,minimum in pairs:
+              item=release(tag)
+              assert not item['draft'] and item['prerelease'],tag
+              assets={a['name']:a for a in item['assets']}
+              assert assets.get(filename,{}).get('size',0)>minimum,(tag,filename)
+              assert all(name in assets for name in ('SHA256SUMS.txt','ONCE-OKU.txt','BUILD_PROVENANCE.txt'))
+              print('PUBLISHED PRE-RELEASE:',item['html_url'],'PACKAGE:',assets[filename]['browser_download_url'])
+          stable=release('v1.1.0')
+          assert not stable['draft'] and not stable['prerelease']
+          print('Stable Windows v1.1.0 remains available:',stable['html_url'])
+          PY

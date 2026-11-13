@@ -56,7 +56,7 @@ def test(app):
     assert "QR" in js and "startReceiver" in js, "Phone-to-PC transfer must survive"
     assert "function loadKMZ" in js and "function drawMeasure" in js
     assert pkg["main"] == "electron/main.cjs"
-    assert pkg["version"] == "1.1.0"
+    assert pkg["version"] == "1.1.1-beta.1"
     assert (root / "app/pafta.js").is_file()
     assert (root / "app/transfer.js").is_file()
     assert (root / "electron/store.cjs").is_file()
@@ -65,6 +65,9 @@ def test(app):
     assert (root / "app/startup-diagnostics.js").is_file()
     assert (root / "app/help-center.js").is_file()
     assert (root / "electron/help-diagnostics.cjs").is_file()
+    assert (root / "electron/lan-receiver.cjs").is_file()
+    assert "lan-start" in main and "lan-stop" in main
+    assert "onLan" in preload and "azil-atlas://lan" in (root / "electron/lan-receiver.cjs").read_text(encoding="utf-8")
     assert "function openHelpCenter" in js
     assert "help:guide" in main and "help:notes" in main
     assert "help-diagnostics" in main and "help-diagnostics" in preload

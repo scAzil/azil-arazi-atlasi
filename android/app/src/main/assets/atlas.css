@@ -1,0 +1,27 @@
+@charset "utf-8";
+:root{--bg:#f3f4ef;--ink:#1c322e;--muted:#60716b;--line:#dce2d6;--paper:#fff;--accent:#295f49;--dark:#142c2a}
+*{box-sizing:border-box}html,body{margin:0;height:100%;font:14px/1.48 system-ui,-apple-system,"Segoe UI",sans-serif;color:var(--ink);background:var(--bg)}body{display:flex;flex-direction:column;overflow:hidden}
+button,input,select,textarea{font:inherit}button{border:1px solid var(--line);border-radius:10px;padding:10px 12px;background:var(--paper);color:var(--ink);min-height:39px;cursor:pointer}button:active{opacity:.73}button.primary{background:var(--accent);color:#fff;border-color:var(--accent)}button.wide{display:block;width:100%;margin:12px 0;padding:15px}
+input,select,textarea{min-width:0;max-width:100%;width:100%;border:1px solid #bfcfc4;border-radius:9px;padding:10px;background:#fff;color:var(--ink)}label{display:block;font-size:13px;font-weight:600;margin:12px 0 6px}label input,label select,label textarea{margin-top:5px;font-weight:400}.small{min-height:32px;padding:5px 8px}
+.top{height:65px;flex-shrink:0;display:flex;align-items:center;justify-content:space-between;gap:10px;background:var(--dark);color:#fff;padding:7px 13px}.brand{display:flex;align-items:center;gap:10px}.brand strong{display:block;font-size:17px}.brand small{display:block;font-size:10px;color:#b9d9cb}.mark{width:35px;height:35px;display:grid;place-items:center;background:#4d8669;border-radius:9px;color:#fff;font-size:23px;font-weight:800}.top .small{background:#2a4840;border:1px solid #45655c;color:#e4f0e8}
+main{position:relative;flex:1;min-height:0}.view{display:none;width:100%;height:100%;overflow:auto;padding:16px}.view.active{display:block}#view-map.active{display:flex;flex-direction:column;overflow:hidden;padding:0}
+.mapTop{display:flex;gap:6px;overflow-x:auto;padding:8px 10px;flex-shrink:0;background:var(--paper);border-bottom:1px solid var(--line)}.mapTop button{white-space:nowrap;font-size:12px;flex-shrink:0;padding:8px 9px}.mapTop button.active{background:#e5efe9;border-color:#7da58e}
+#map{flex:1;min-height:0;width:100%;background:#dde9df;z-index:1}#mapHint{font-size:11px;color:var(--muted);text-align:center;background:#e9eee9;padding:4px 8px;flex-shrink:0}.leaflet-control-attribution{font-size:10px!important}
+.tabs{height:65px;flex-shrink:0;display:flex;justify-content:space-around;border-top:1px solid var(--line);background:#fff;padding-bottom:env(safe-area-inset-bottom)}.tabs button{border:0;border-radius:0;background:none;display:flex;align-items:center;flex-direction:column;gap:0;justify-content:center;min-height:0;flex:1;font-size:11px;padding:3px 0}.tabs button span{font-size:22px}.tabs button.active{color:var(--accent);font-weight:800;border-top:3px solid var(--accent)}
+h2{font-size:20px;margin:4px 0 16px}h3{font-size:15px;margin:8px 0}.viewhead,.inline{display:flex;align-items:center;justify-content:space-between;gap:9px}.inline>*{min-width:0}.viewhead h2{margin:0}.muted{color:var(--muted);font-size:12px}.card,.panel,.info,.helpText{background:var(--paper);border:1px solid var(--line);border-radius:12px;padding:13px;margin:12px 0}.card h3{margin:0 0 4px}.card .meta{font-size:12px;color:var(--muted)}.card .actions{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}.card .actions button{font-size:12px;padding:6px 9px;min-height:33px}
+.floating{z-index:850;position:absolute;top:56px;left:10px;right:10px;max-height:66%;overflow:auto;box-shadow:0 15px 40px #0003;margin:0}.floating[hidden],.panel[hidden]{display:none!important}
+dialog{width:calc(100% - 28px);max-width:490px;max-height:85%;overflow:auto;border:1px solid var(--line);border-radius:16px;padding:18px;box-shadow:0 20px 80px #0016;color:var(--ink)}dialog::backdrop{background:#142c2aaa}dialog h2{margin:0}.fields{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.layerRow{border-bottom:1px solid var(--line);padding:10px 0}.layerRow h4{margin:0 0 6px}.layerRow .actions{display:flex;gap:7px}.layerRow button{font-size:12px;padding:6px 9px;min-height:31px}.stylebar{height:5px;border-radius:4px;margin-bottom:7px}.helpText h3{margin-top:20px}
+#toast{position:fixed;z-index:3000;bottom:77px;left:12px;right:12px;pointer-events:none;background:#1f3d33;color:#fff;text-align:center;border-radius:10px;padding:11px;opacity:0;transition:opacity .2s}#toast.visible{opacity:1}
+@media(min-width:750px){.top{height:76px}.mapTop{justify-content:center}.tabs{height:75px}.tabs button{font-size:13px}.view:not(#view-map){max-width:900px;margin:auto}}
+
+/* Windows QR transfer controls */
+.qrChoice{display:flex;align-items:center;gap:10px;padding:9px 7px;margin:0;border-bottom:1px solid var(--line);font-weight:400}
+.qrChoice input{width:21px;min-width:21px;height:21px;accent-color:var(--accent)}
+.qrChoice span{display:flex;flex-direction:column;gap:2px}
+.qrChoice small{color:var(--muted)}
+#qrRecords{max-height:34vh;overflow-y:auto;background:#fff;border:1px solid var(--line);border-radius:10px}
+#qrProgress{display:block;width:100%;height:15px;margin:12px 0;accent-color:var(--accent)}
+#qrReceipt{font-size:13px;color:var(--accent);min-height:22px}
+.tabs button{min-width:0;font-size:10px}
+.tabs button span{font-size:20px}

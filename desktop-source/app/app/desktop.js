@@ -243,7 +243,24 @@ let transferSummary={},transferMessage='Bağlantı kapalı.',transferIssues=[];
 function summaryText(){return 'Eklenen: '+(transferSummary.added||0)+' · Aynı: '+(transferSummary.same||0)+' · Çakışma: '+(transferSummary.conflict||0)+' · Alınmayan: '+((transferSummary.trash||0)+(transferSummary['missing-parent']||0))+' · Hata: '+(transferSummary.error||0)}
 function summary(result){transferSummary[result.status]=(transferSummary[result.status]||0)+1;const el=$('transferSummary');if(el)el.textContent=summaryText()}
 async function receiveRecord(record){let result=await api('import',{record});if(result.status==='trash'&&confirm('“'+record.title+'” PC’de silinmiş. Yeniden alınsın mı?'))result=await api('import',{record,restore:true});if(result.status==='missing-parent')transferIssues.push(record.title+': Ana nokta eksik; önce ana noktayı, ardından bu ziyareti aktarın.');if(result.warning)transferIssues.push(record.title+': '+result.warning);summary(result);return result}
-async function startQR(){receiver?.close();transferSummary={};receiver=startReceiver({onStatus:s=>{transferMessage=s;const el=$('transferState');if(el)el.textContent=s},onStart:async n=>{if(!Number.isInteger(n)||n<0||n>10000)throw Error('Kayıt sayısı geçersiz');await api('backup','before-import');transferSummary={};transferIssues=[];toast(n+' kayıt alınacak.')},onRecord:receiveRecord,onDone:async()=>{await refresh();toast(summaryText())}});const qr=qrcode(0,'M');qr.addData(receiver.url);qr.make();receiver.html='<p><img class="qr" src="'+qr.createDataURL(5,4)+'" alt="Telefon aktarım QR kodu"></p><small>Telefonun kamerasıyla okutun. Sonra telefonda tümünü veya tek tek seçin.</small>';render();}
+async function startQR(){
+ receiver?.close();await api('lan-stop');transferSummary={};transferIssues=[];
+ let localHtml='';
+ try{
+   const local=await api('lan-start');
+   const codes=(local.invitations||[{url:local.url}]).slice(0,3);
+   localHtml='<h3>1 · Aynı Wi-Fi / yerel ağ (önerilir)</h3><p>Bilgisayar ve telefon aynı Wi-Fi veya telefon erişim noktasında olmalı. İnternet gerekmez.</p>'+
+     codes.map(entry=>{const qr=qrcode(0,'M');qr.addData(entry.url);qr.make();
+       return '<div class="lan-qr"><img class="qr" src="'+qr.createDataURL(5,4)+'" alt="Yerel ağ QR">'+
+         '<p><strong>'+esc(entry.interface||'LAN')+'</strong> · '+esc(entry.address||'')+'</p></div>'}).join('')+
+     '<p class="notice">Telefonun AZiL uygulamasındaki QR Aktar ekranıyla okutun. Windows Güvenlik Duvarı sorarsa yalnızca özel ağlara izin verin. QR gizli oturum anahtarıdır, paylaşmayın.</p>';
+ }catch(e){localHtml='<p class="notice">Yerel QR başlatılamadı: '+esc(e.message)+'. Wi-Fi/Ethernet bağlantısını kontrol edin.</p>'}
+ receiver=startReceiver({onStatus:msg=>{if(!transferMessage.startsWith('Yerel')){transferMessage='İnternet: '+msg;const el=$('transferState');if(el)el.textContent=transferMessage}},onStart:async n=>{if(!Number.isInteger(n)||n<0||n>10000)throw Error('Kayıt sayısı geçersiz');await api('backup','before-import');transferSummary={};transferIssues=[];toast(n+' kayıt alınacak.')},onRecord:receiveRecord,onDone:async()=>{await refresh();toast(summaryText())}});
+ const qr=qrcode(0,'M');qr.addData(receiver.url);qr.make();
+ receiver.html=localHtml+'<details><summary>2 · İnternet / eski QR yöntemi (yedek)</summary><p>Bu yöntem WebRTC kullanır. Bazı modemlerde ve kurumsal ağlarda bağlantı kurulamayabilir.</p><img class="qr" src="'+qr.createDataURL(5,4)+'" alt="İnternet QR kodu"></details>';
+ transferMessage='Yerel QR aktif. Telefonun QR Aktar ekranından ilk kodu okutun.';
+ render();
+}
 function importChooser(data){if(data.app!=='Dijital Saha Defteri'||!Array.isArray(data.records)||data.records.length>10000)throw Error('Desteklenmeyen saha JSON yedeği');modal('Aktarılacak kayıtları seç','<label><input id="selectAll" type="checkbox" checked> Tüm kayıtlar</label><div id="importChoices">'+data.records.map((r,i)=>'<label><input type="checkbox" data-import-index="'+i+'" checked> '+esc(r.project)+' / '+esc(r.title)+' · '+(r.photos?.length||0)+' fotoğraf</label>').join('')+'</div><button id="doImport" class="primary">Seçilenleri PC’ye al</button>');$('selectAll').onchange=e=>$('importChoices').querySelectorAll('input').forEach(c=>c.checked=e.target.checked);$('doImport').onclick=guard(async()=>{const selected=[...$('importChoices').querySelectorAll('input:checked')].map(c=>data.records[Number(c.dataset.importIndex)]);if(!selected.length)throw Error('En az bir kayıt seçin');const button=$('doImport');button.disabled=true;try{await api('backup','before-import');transferSummary={};transferIssues=[];
  const source=new Map(data.records.map(r=>[r.id,r])),ordered=[],seen=new Set(),visiting=new Set();function add(r){if(seen.has(r.id))return;if(visiting.has(r.id))throw Error('Ziyaret bağlantısı döngü içeriyor');visiting.add(r.id);if(r.parentId&&source.has(r.parentId))add(source.get(r.parentId));visiting.delete(r.id);seen.add(r.id);ordered.push(r)}for(const r of selected)add(r);
  for(const r of ordered){try{await receiveRecord(r)}catch(e){summary({status:'error'});transferIssues.push((r.title||r.id)+': '+e.message)}}
@@ -265,7 +282,7 @@ const actions={
 compare,
  'save-settings':async()=>{await api('settings',{theme:$('theme').value,font:Math.max(12,Math.min(22,Number($('fontSize').value)||15)),dense:$('dense').checked,photoMax:$('photoMax').value});await refresh()},
  'storage-info':async()=>{const el=$('storageSummary');if(!el)return;el.textContent='Arşiv hesaplanıyor…';const info=await api('storage');if(!$('storageSummary'))return;$('storageSummary').textContent='Varlıklar: '+info.assetsCount+' dosya / '+formatBytes(info.assetsBytes)+' · Arşiv JSON: '+formatBytes(info.archiveBytes)+' · JSON yedekleri: '+info.backupsCount},'save-key':async()=>{await api('settings',{esriKey:$('esriKey').value.trim()});toast('Yerel anahtar kaydedildi.');await refresh()},
- 'qr-start':startQR,'qr-stop':()=>{receiver?.close();receiver=null;render()},json:()=>$('jsonFile').click(),
+ 'qr-start':startQR,'qr-stop':async()=>{receiver?.close();receiver=null;await api('lan-stop');transferMessage='Bağlantı kapatıldı.';render()},json:()=>$('jsonFile').click(),
  pafta:()=>$('kmzFile').click(),index:()=>$('indexFile').click(),
  'layer-delete':async id=>{if(confirm('Katman kaldırılsın mı? Bu indeksle kırpılan paftalar, yeni indeks seçilene kadar gizlenecek. Önceki yedekler korunur.')){await api('layer',{id,remove:true});await refresh()}},'layer-front':async id=>{await api('layer',{...state.layers.find(l=>l.id===id),front:true});await refresh()},
  'layer-style':id=>openLayerStyleEditor(id),
@@ -296,6 +313,19 @@ document.addEventListener('input',e=>{if(e.target.id==='search'){filter.q=e.targ
 $('jsonFile').onchange=guard(async e=>{try{const f=e.target.files[0];if(!f)return;if(f.size>300*1024*1024)throw Error('JSON en fazla 300 MB');importChooser(JSON.parse(await f.text()))}finally{e.target.value=''}});
 $('kmzFile').onchange=guard(async e=>{try{await loadKMZ([...e.target.files])}finally{e.target.value=''}});$('indexFile').onchange=guard(async e=>{try{if(e.target.files[0])await loadIndex(e.target.files[0])}finally{e.target.value=''}});
 $('newPoint').onclick=guard(()=>edit());$('quickImport').onclick=guard(()=>go('transfer'));$('quickBackup').onclick=guard(exportAtlas);$('profile').onclick=guard(about);$('modal').addEventListener('cancel',e=>{if(window.atlasDirty){e.preventDefault();closeModal()}});
+window.desktop.onLan(event=>{
+ if(!event||typeof event!=='object')return;
+ if(event.kind==='status'){
+   transferMessage=event.status||'Yerel ağ aktarımı';const el=$('transferState');if(el)el.textContent=transferMessage;
+ }else if(event.kind==='begin'){
+   transferSummary={};transferIssues=[];const el=$('transferSummary');if(el)el.textContent='Yerel aktarım başladı: '+event.count+' kayıt.';
+ }else if(event.kind==='receipt'){
+   summary({status:event.status||'unknown'});
+   if(event.warning)transferIssues.push(String(event.warning).slice(0,180));
+ }else if(event.kind==='done'){
+   refresh().then(()=>toast('Yerel aktarım tamamlandı: '+event.received+' kayıt.')).catch(e=>toast(e.message));
+ }
+});
 window.desktop.onMenu(guard(async c=>{if(c==='project')await actions.project();else if(c==='new')edit();else if(c==='archive-export')await exportAtlas();else if(c==='about')about();else if(c.startsWith('help:'))await openHelpCenter(c.slice(5));else go(c)}));
 document.addEventListener('keydown',e=>{
  if(e.key!=='Escape'||view!=='map'||$('modal').open)return;
@@ -303,6 +333,6 @@ document.addEventListener('keydown',e=>{
   if(mapPanels[key]){mapPanels[key]=false;updateMapWorkspace();e.preventDefault();break}
  }
 });
-window.addEventListener('beforeunload',()=>receiver?.close());
+window.addEventListener('beforeunload',()=>{receiver?.close();api('lan-stop').catch(()=>{})});
 await refresh();
 window.__atlasStartupReady=true;
