@@ -1,0 +1,124 @@
+name: Publish Arazi Atlası v1.1.0 — Windows x64
+
+# Release only after this file is merged to the default branch.
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/publish-v1.1.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  actions: read
+
+jobs:
+  release:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download exact tested stable Windows build
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          RUN_ID=43352947814
+          EXPECTED_COMMIT=664f39922dd19e5431f6ff4a7d005b5d7085820c
+          EXPECTED_ARTIFACT_ID=14004423431
+          EXPECTED_ARTIFACT_NAME=Arazi-Atlasi-v1.1.0-Windows-x64
+          actual_sha="$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$RUN_ID" --jq '.head_sha')"
+          conclusion="$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$RUN_ID" --jq '.conclusion')"
+          actual_artifact="$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$RUN_ID/artifacts" --jq '.artifacts[] | select(.name == "Arazi-Atlasi-v1.1.0-Windows-x64") | .id')"
+          test "$actual_sha" = "$EXPECTED_COMMIT"
+          test "$conclusion" = success
+          test "$actual_artifact" = "$EXPECTED_ARTIFACT_ID"
+          gh run download "$RUN_ID" --repo "$GITHUB_REPOSITORY" --name "$EXPECTED_ARTIFACT_NAME" --dir _candidate
+          ls -lh _candidate/
+      - name: Verify ZIP, original files and SHA-256
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          import hashlib, shutil, zipfile
+
+          root=Path('_candidate')
+          name='Arazi-Atlasi-1.1.0-Windows-x64.zip'
+          archive=root/name
+          checksum_file=root/'SHA256SUMS.txt'
+          assert archive.is_file() and archive.stat().st_size>100_000_000,'Windows ZIP missing/too small'
+          assert checksum_file.is_file(),'SHA256SUMS missing'
+          checks={}
+          for line in checksum_file.read_text(encoding='utf-8-sig').splitlines():
+              parts=line.strip().split(None,1)
+              if len(parts)==2:
+                  checks[Path(parts[1].lstrip('*')).name]=parts[0].lower()
+          actual=hashlib.sha256(archive.read_bytes()).hexdigest()
+          assert actual==checks.get(name),'Windows ZIP SHA-256 mismatch'
+          with zipfile.ZipFile(archive) as z:
+              assert z.testzip() is None,'ZIP integrity failure'
+              members=set(z.namelist())
+              required={
+                  'Arazi-Atlasi/Arazi Atlasi.exe',
+                  'Arazi-Atlasi/resources/app.asar',
+                  'ONCE-OKU.txt'
+              }
+              assert required<=members,'Windows runtime files missing: '+str(required-members)
+              assert all('/Arsiv/' not in f and '/Yedekler/' not in f for f in members), 'Personal archive/backup included'
+              assert all(not f.startswith('/') and '../' not in f and '\\' not in f for f in members),'Unsafe ZIP paths'
+          release=Path('_release')
+          release.mkdir(exist_ok=True)
+          for p in (archive,checksum_file):
+              shutil.copy2(p,release/p.name)
+          (release/'BUILD_PROVENANCE.txt').write_text(
+              'AZiL Arazi Atlası v1.1.0\n'
+              'User-tested predecessor: v1.1.0-beta.4\n'
+              'Stable Windows build: https://github.com/scAzil/azil-arazi-atlasi/actions/runs/43352947814\n'
+              'Stable source commit: 664f39922dd19e5431f6ff4a7d005b5d7085820c\n'
+              'GitHub Actions artifact ID: 14004423431\n'
+              'Windows ZIP SHA-256: '+actual+'\n'
+              'Verified: Chromium startup/help UI, KML map, portable archive ZIP interchange, redacted diagnostics and ZIP integrity.\n',
+              encoding='utf-8'
+          )
+          print('Verified ZIP and SHA-256:',actual)
+          PY
+      - name: Publish GitHub Release v1.1.0
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          if gh release view v1.1.0 -R "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            echo "Release already exists; not overwriting published binaries."
+          else
+            gh release create v1.1.0 \
+              _release/Arazi-Atlasi-1.1.0-Windows-x64.zip \
+              _release/SHA256SUMS.txt \
+              _release/BUILD_PROVENANCE.txt \
+              --repo "$GITHUB_REPOSITORY" \
+              --target "$GITHUB_SHA" \
+              --title "AZiL Arazi Atlası v1.1.0 — Windows x64" \
+              --notes-file RELEASE_NOTES_v1.1.0.md \
+              --latest
+          fi
+      - name: Verify public Release and downloadable assets
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json, os, subprocess
+          data=json.loads(subprocess.check_output([
+              'gh','api',f'repos/{os.environ["GITHUB_REPOSITORY"]}/releases/tags/v1.1.0'
+          ],text=True))
+          assert data.get('draft') is False and data.get('prerelease') is False,'Release is not public stable'
+          actual={a['name']:a['size'] for a in data['assets']}
+          required=['Arazi-Atlasi-1.1.0-Windows-x64.zip','SHA256SUMS.txt','BUILD_PROVENANCE.txt']
+          for filename in required:
+              assert actual.get(filename,0)>0,'Missing asset: '+filename
+          print('Official stable Release:',data['html_url'])
+          print('Verified assets:',actual)
+          PY
