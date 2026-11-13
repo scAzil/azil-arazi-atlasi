@@ -117,7 +117,11 @@ function createLanReceiver({onStart=async()=>{},onRecord=async()=>({status:'adde
       if(!Number.isSafeInteger(message.seq)||message.seq!==sequence+1)
         throw Error('Aktarım sıra numarası uyuşmadı; yeni QR oturumu açın.');
       let result;
-      if(message.kind==='begin'){
+      if(message.kind==='hello'){
+        if(active)throw Error('Etkin aktarım sırasında tekrar bağlanılamaz.');
+        result={kind:'hello',message:'Windows yerel aktarımı hazır.'};
+        sendStatus('Telefon yerel ağ üzerinden bağlandı. Kayıt gönderimi bekleniyor.');
+      }else if(message.kind==='begin'){
         if(active)throw Error('Aktarım başlatılmış.');
         if(!Number.isInteger(message.count)||message.count<1||message.count>MAX_RECORDS)
           throw Error('Aktarılacak kayıt sayısı geçersiz.');
