@@ -25,7 +25,7 @@ import java.util.UUID;
 import java.util.regex.Pattern;
 
 final class AtlasStore {
-    static final String VERSION = "0.1.0-beta.2";
+    static final String VERSION = "0.1.0-beta.3";
     static final Pattern ASSET = Pattern.compile("^[a-f0-9]{64}\\.(jpg|png|webp|json|kml|kmz)$");
     private final Context context;
     private final AtomicFile file;
