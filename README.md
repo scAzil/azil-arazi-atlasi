@@ -8,11 +8,15 @@ Arazi, CBS, proje/ziyaret ve saha fotoğraflarını yerel arşivde birleştiren 
 
 Bu sürüm kullanıcı verilerini `Arsiv` ve `Yedekler` klasörlerinde tutar. ZIP'i tamamen çıkarın; `Arazi Atlasi.exe` dosyasını `resources` klasöründen ayırmayın.
 
-## v1.1.0-beta.1 — Harita Çalışma Alanı (test sürümü)
+## v1.1.0-beta.2 — Harita Çalışma Alanı (test sürümü)
 
 [Geliştirme dalı](https://github.com/scAzil/azil-arazi-atlasi/tree/feat/atlas-v1.1-map-workspace) · [Windows test derlemeleri (Actions)](https://github.com/scAzil/azil-arazi-atlasi/actions)
 
 Yenilikler:
+- **KML/KMZ çizim stili:** Nokta, çizgi ve poligonlar için ayrı renk/kalınlık ve dolgu seçenekleri. Alanın içini tamamen boş bırakmak için dolgu saydamlığı = 0.
+- **Yerel arşiv standardı AZIL-ATLAS/1:** Güncel kayıtları, katmanları ve bağlı fotoğraf/paftaları SHA-256 doğrulamalı ZIP dosyasında dışa aktar ve güvenli biçimde yeniden içe aktar.
+- **Eski yedekten dönme seçenekleri kaldırıldı:** Yedekten Geri Yükle, Harici Yedekten Dön, Eski AppData ve Değişiklik Geçmişi arayüzleri kaldırıldı; mevcut dosyalar silinmedi.
+- **Hesap/bulut yok:** Arşiv dosyaları kullanıcının kendi cihazında kalır. Web için ortak dosya okuma/yazma modülleri hazır; canlı site uygulamasına henüz entegre edilmedi.
 - **Harita pencerenin tamamını kullanır.** Normal menü, üst başlık ve durum çubuğu harita görünümünde gizlenir.
 - Yüzen küçük kontrol çubuğu: **Çalışma alanı, Menü, Araçlar, Katmanlar, Bilgi, Tam ekran**. Paneller kapalı başlar; tek tuşla açılır. Windows F11 tam ekran desteklenir.
 - Haritadaki nokta seçimi, katmanlar, pafta indeksi, KML/KMZ, mesafe/alan ölçümü, WGS84–UTM 37N koordinatları korunur.
@@ -26,7 +30,13 @@ Bu geliştirme, yayımlanmış Windows **v1.0.3** paketinden geri çıkarılan E
 
 **Beta sürümü saha verilerinin tek kopyası üzerinde denemeyin.** Önce mevcut `Arsiv` ve `Yedekler` klasörlerinizi başka bir konuma kopyalayın. Arşivler uygulama klasöründe olduğundan, beta paketini başka klasöre açarsanız eski kayıtlar kendiliğinden gelmez. Veri klasörlerini taşımadan önce yedek alın.
 
-Arayüz test paketi doğrulanıp Windows'ta gerçek deneme yapıldıktan sonra ayrı bir v1.1 Release hazırlanacaktır.
+Arayüz test paketi doğrulanıp Windows'ta gerçek deneme yapıldıktan sonra ayrı bir v1.1 Release hazırlanacaktır. GitHub PR test dalı şu anda kararlı v1.0.3 sürümünün yerini almaz.
+
+## Ortak arşiv standardı
+
+- [AZIL-ATLAS/1 dosya biçimi](docs/AZIL-ATLAS-ARCHIVE-v1.md)
+- [Web entegrasyon dosyaları](web-integration/README.md) (henüz canlı siteye uygulanmadı)
+- [Windows arşiv motoru](desktop-source/app/electron/portable-archive.cjs)
 
 ## Kaynaklar
 
