@@ -52,7 +52,7 @@ jobs:
       - name: Overlay improved UI into original Electron app
         shell: pwsh
         run: |
-          npm install --no-save --no-package-lock "@electron/asar@3.4.1"
+          npm install --no-save --no-package-lock "@electron/asar@3.4.1" "playwright-core@1.56.1"
           npx --no-install asar extract "_base/Arazi-Atlasi/resources/app.asar" "_app"
           $protected = @("electron/store.cjs", "app/pafta.js", "app/transfer.js")
           $baseline = @{}
@@ -72,7 +72,6 @@ jobs:
           }
           python "tests/check_v1_1.py" "_app"
           node "tests/portable-archive.test.cjs" "_app"
-          npm install --no-save --no-package-lock "playwright-core@1.56.1"
           node "tests/renderer-startup-smoke.cjs" "_app/app"
           npx --no-install asar pack "_app" "_base/Arazi-Atlasi/resources/app.asar"
       - name: Validate repackaged Electron source
