@@ -70,16 +70,17 @@ jobs:
           set -euo pipefail
           npm install --no-save --no-package-lock playwright-core@1.56.1
           node --check android/app/src/main/assets/qr-transfer.js
+          node tests/lan-receiver.test.cjs
           node tests/android-web-smoke.cjs
       - name: Package installable APK for testing
         shell: bash
         run: |
           set -euo pipefail
           mkdir -p _dist
-          cp android/app/build/outputs/apk/debug/app-debug.apk "_dist/AZiL-Arazi-Atlasi-Android-v0.1.0-beta.2.apk"
+          cp android/app/build/outputs/apk/debug/app-debug.apk "_dist/AZiL-Arazi-Atlasi-Android-v0.1.0-beta.3.apk"
           sha256sum _dist/*.apk > _dist/SHA256SUMS.txt
           cat > _dist/ONCE-OKU.txt <<'EOF'
-          AZiL Arazi Atlası Android v0.1.0-beta.2
+          AZiL Arazi Atlası Android v0.1.0-beta.3
           ---------------------------------------
           Android 8.0 (API 26) ve üzeri, Android telefon/tablet.
           Bu bir TEST sürümüdür. Henüz Google Play üzerinde yayımlanmadı.
@@ -92,9 +93,10 @@ jobs:
           OSM çevrimiçi altlığı isteğe bağlıdır ve internet gerektirir.
           KML/GeoJSON vektör dosyası en fazla 3 MB.
           Arşiv ZIP aktarımı ilk Android beta için 180 MB açılmış içerikle sınırlıdır.
-          Windows v1.1 QR kodunu uygulama içinden tarayıp fotoğraflı kayıtları
-          tek yönlü telefon -> Windows aktarabilirsiniz. İki cihazın internet
-          bağlantısı ve Windows QR ekranının açık olması gerekir.
+          Windows v1.1.1-beta.1: AYNI WI-FI yerel QR: AES-GCM şifreli, İnternet gerekmez.
+          Windows v1.1.0 eski QR: WebRTC ve internet gerekir; bazı ağlarda çalışmaz.
+          İki sürümde de telefon -> Windows tek yönlü aktarım, fotoğraflar dahil.
+          Windows Güvenlik Duvarı özel ağda bağlantıya izin vermelidir.
           Hesap, bulut eşitleme veya Windows -> telefon aktarımı yoktur.
           Web sitesindeki canlı Arazi Atlası projesi değiştirilmedi.
 
@@ -104,9 +106,9 @@ jobs:
           EOF
       - uses: actions/upload-artifact@v4
         with:
-          name: AZiL-Arazi-Atlasi-Android-v0.1.0-beta.2
+          name: AZiL-Arazi-Atlasi-Android-v0.1.0-beta.3
           path: |
-            _dist/AZiL-Arazi-Atlasi-Android-v0.1.0-beta.2.apk
+            _dist/AZiL-Arazi-Atlasi-Android-v0.1.0-beta.3.apk
             _dist/SHA256SUMS.txt
             _dist/ONCE-OKU.txt
           if-no-files-found: error
