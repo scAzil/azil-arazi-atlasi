@@ -21,7 +21,7 @@ function native(name,...args){
 function refresh(){
  state=native('getState');
  if(!Array.isArray(state.projects)||!Array.isArray(state.records)||!Array.isArray(state.layers))throw Error('Yerel arşiv biçimi okunamadı.');
- renderProjects();renderRecords();renderLayers();renderMap();renderArchiveInfo();
+ renderProjects();renderRecords();renderLayers();renderMap();renderArchiveInfo();window.AZILQr?.renderSelection();
 }
 function openTab(tab){
  activeTab=tab;
@@ -277,6 +277,7 @@ function fitLayer(id){
   if(candidate.getBounds().isValid()){openTab('map');map.fitBounds(candidate.getBounds().pad(.15));}
  }catch(e){toast('Katmana yakınlaşılamadı.')}
 }
+window.AtlasField={getState:()=>state};
 window.Atlas={
  location:function(data){
   if(!data||data.ok===false){toast(data?.error||'GPS konumu bulunamadı.');return;}
