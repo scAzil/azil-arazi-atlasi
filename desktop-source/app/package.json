@@ -1,0 +1,9 @@
+{
+  "name": "arazi-atlasi-desktop",
+  "version": "1.1.0",
+  "description": "Tam ekran harita, gizlenebilir menüler, yerel saha arşivi ve tek yönlü telefon aktarımı",
+  "author": "AZiL",
+  "private": true,
+  "main": "electron/main.cjs",
+  "productName": "Arazi Atlası"
+}

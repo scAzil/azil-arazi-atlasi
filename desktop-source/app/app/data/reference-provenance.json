@@ -1,0 +1,31 @@
+{
+  "sourceHashes": {
+    "sygm.geojson": "042f3f661ba66bbdd0e5167341d958c4598868b04e647ebc120747f75547c60e",
+    "osm-asi.json": "62e6794d110f59e3da818e72b7c213dc6b84889bddbdafc6271c3eee9f4b5116"
+  },
+  "osmTimestamp": "2026-10-07T12:58:00Z",
+  "queries": {
+    "original_bbox": [
+      35.75,
+      35.75,
+      37.35,
+      37.05
+    ],
+    "supplement_bbox": [
+      35.75,
+      37.04,
+      37.35,
+      37.25
+    ],
+    "supplement_timestamp": {
+      "timestamp_osm_base": "2026-10-07T13:07:05Z",
+      "copyright": "The data included in this document is from www.openstreetmap.org. The data is made available under ODbL."
+    }
+  },
+  "omittedInvalid": [],
+  "counts": {
+    "asi-akarsular.geojson": 61,
+    "asi-su-yuzeyleri.geojson": 31,
+    "asi-baraj-govdeleri.geojson": 27
+  }
+}

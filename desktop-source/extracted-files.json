@@ -1,0 +1,90 @@
+[
+  {
+    "path": "package.json",
+    "bytes": 235
+  },
+  {
+    "path": "app/pafta.js",
+    "bytes": 13508
+  },
+  {
+    "path": "app/desktop.css",
+    "bytes": 4787
+  },
+  {
+    "path": "app/icon.svg",
+    "bytes": 367
+  },
+  {
+    "path": "app/desktop.js",
+    "bytes": 43657
+  },
+  {
+    "path": "app/index.html",
+    "bytes": 2033
+  },
+  {
+    "path": "app/transfer.js",
+    "bytes": 2966
+  },
+  {
+    "path": "electron/preload.cjs",
+    "bytes": 532
+  },
+  {
+    "path": "electron/store.cjs",
+    "bytes": 15451
+  },
+  {
+    "path": "electron/main.cjs",
+    "bytes": 7176
+  },
+  {
+    "path": "app/vendor/turf.js",
+    "bytes": 563527
+  },
+  {
+    "path": "app/vendor/fflate.js",
+    "bytes": 32665
+  },
+  {
+    "path": "app/vendor/qrcode.js",
+    "bytes": 56694
+  },
+  {
+    "path": "app/vendor/leaflet.js",
+    "bytes": 147552
+  },
+  {
+    "path": "app/vendor/jsqr.js",
+    "bytes": 256885
+  },
+  {
+    "path": "app/vendor/PROJ4-LICENSE.md",
+    "bytes": 1454
+  },
+  {
+    "path": "app/vendor/GIS-NOTICES.txt",
+    "bytes": 434
+  },
+  {
+    "path": "app/vendor/leaflet.css",
+    "bytes": 14806
+  },
+  {
+    "path": "app/vendor/proj4.js",
+    "bytes": 92739
+  },
+  {
+    "path": "app/vendor/trystero.js",
+    "bytes": 132756
+  },
+  {
+    "path": "app/data/SOURCES.md",
+    "bytes": 4140
+  },
+  {
+    "path": "app/data/reference-provenance.json",
+    "bytes": 792
+  }
+]

@@ -1,0 +1,70 @@
+:root{font-family:Segoe UI,Arial,sans-serif;color:#23382d;background:#f3f4ee;font-size:15px;--bg:#f3f4ee;--panel:#fff;--ink:#23382d;--muted:#657368;--line:#d9dfd5;--accent:#42664d}*{box-sizing:border-box}body{margin:0;display:flex}body.dark{--bg:#141c18;--panel:#1d2922;--ink:#e5ecdf;--muted:#b0c0b1;--line:#3c4b40;--accent:#91bc8b;background:var(--bg);color:var(--ink)}button,input,select,textarea{font:inherit}button{cursor:pointer;padding:.65rem .9rem;border:1px solid var(--line);border-radius:8px;background:var(--panel);color:var(--ink)}button:hover{border-color:var(--accent)}button.primary{background:#42664d;color:white}button.danger{color:#b34437}button:disabled{opacity:.5;cursor:wait}input,textarea,select{padding:.65rem;border:1px solid var(--line);border-radius:6px;background:var(--panel);color:var(--ink);width:100%}input[type=checkbox]{width:auto}label{display:block;margin:10px 0}small{display:block;color:var(--muted);line-height:1.5}h1,h2,h3{margin-top:0}h1{font-size:1.7rem;margin-bottom:0}p{line-height:1.65}#sidebar{width:225px;position:fixed;top:0;bottom:0;border-right:1px solid var(--line);padding:25px 16px;display:flex;flex-direction:column;background:var(--panel)}.brand{display:flex;gap:10px;align-items:center;margin-bottom:38px}.brand b{font-size:.85rem;letter-spacing:.07em}nav{display:grid;gap:8px}nav button{text-align:left;border-color:transparent}nav button.active{background:#e3eddf;color:#2e4d35;font-weight:600}.profile{margin-top:auto;display:flex;align-items:center;gap:10px;text-align:left}.avatar{border-radius:50%;background:#e2ebd8;color:#42664d;padding:10px}.profile b{font-size:.9rem}main{margin-left:225px;width:calc(100% - 225px);padding:26px 32px 60px}header{display:flex;justify-content:space-between;align-items:center;margin-bottom:26px;gap:15px}.actions{display:flex;flex-wrap:wrap;gap:8px;align-items:center}.panel,.card{background:var(--panel);border:1px solid var(--line);padding:20px;border-radius:12px;margin-bottom:15px}.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:15px}.metric{font-size:2.3rem;display:block;margin:12px 0}.grid{display:grid;grid-template-columns:1fr 1fr;gap:18px}.notice{padding:12px;background:#eef1de;color:#425036;border-radius:8px}.filters{display:grid;grid-template-columns:2fr 1fr 1fr 1fr;gap:10px;margin-bottom:18px}.record{border-bottom:1px solid var(--line);padding:15px 0;display:flex;justify-content:space-between;gap:14px}.record h3{margin-bottom:5px}.badge{display:inline-block;padding:3px 7px;background:#e3ebdd;color:#40583a;font-size:.8rem;border-radius:5px}.photos{display:flex;flex-wrap:wrap;gap:10px}.photos img{width:150px;height:115px;object-fit:cover;border-radius:8px}.photo img{cursor:pointer}.photo{border:1px solid var(--line);padding:6px;border-radius:8px}dialog{width:min(1000px,92vw);max-height:90vh;overflow:auto;border:1px solid var(--line);border-radius:14px;background:var(--panel);color:var(--ink);padding:28px}dialog::backdrop{background:#11231a99}.dialogHead{display:flex;justify-content:space-between;gap:10px;margin-bottom:15px}.mapGrid{display:grid;grid-template-columns:230px minmax(300px,1fr) 240px;gap:12px;height:calc(100vh - 245px)}#map{height:100%;min-height:450px;border-radius:12px;background:#dce1d4}#layers,#mapDetail{overflow:auto;height:100%;margin:0;font-size:.9rem}.mapGrid.noLayers{grid-template-columns:1fr 240px}.mapGrid.noDetail{grid-template-columns:230px 1fr}.mapGrid.noLayers.noDetail{grid-template-columns:1fr}.layer{border-bottom:1px solid var(--line);padding-bottom:12px;margin-bottom:12px}#status{position:fixed;bottom:0;left:225px;right:0;background:var(--panel);border-top:1px solid var(--line);padding:9px 22px;font-size:.78rem;z-index:900}#toast{position:fixed;bottom:55px;right:25px;z-index:2000;max-width:550px;padding:16px 22px;background:#284c34;color:white;border-radius:10px;white-space:pre-line}table{border-collapse:collapse;width:100%}td,th{text-align:left;padding:10px;border-bottom:1px solid var(--line)}body.dense .record{padding:7px 0}.qr{width:240px;max-width:100%;image-rendering:pixelated}.report-photo{max-width:240px;max-height:190px}.aboutHero{padding:24px;background:#e3eddf;color:#284b34;border-radius:10px}.aboutHero h2{font-size:2rem}.muted{color:var(--muted)}[hidden]{display:none!important}@media(max-width:1150px){#sidebar{width:190px}main{margin-left:190px;width:calc(100% - 190px);padding:20px}#status{left:190px}.mapGrid{grid-template-columns:200px 1fr}#mapDetail{display:none}.filters{grid-template-columns:1fr 1fr}}
+/* AZiL v1.1 — Map-first workspace. The app shell and data storage remain intact. */
+body.map-workspace{overflow:hidden}
+body.map-workspace main{margin:0!important;width:100%!important;padding:0!important}
+body.map-workspace main>header,body.map-workspace #status,body.map-workspace #content{display:none!important}
+body.map-workspace #mapView{position:fixed;inset:0;z-index:100;background:var(--bg);overflow:hidden}
+body.map-workspace #sidebar{z-index:140;transform:translateX(-110%);transition:transform .18s ease;box-shadow:0 16px 35px #0002}
+body.map-workspace.map-menu-open #sidebar{transform:translateX(0)}
+body.map-workspace .mapGrid{position:absolute;inset:0;height:100%;width:100%;display:block;margin:0;overflow:hidden}
+body.map-workspace #map{position:absolute;inset:0;width:100%;height:100%;min-height:0;border:0;border-radius:0;z-index:1}
+#mapQuickbar{display:flex;align-items:center;gap:6px;position:absolute;z-index:1000;top:12px;left:56px;right:12px;width:max-content;max-width:calc(100vw - 72px);overflow-x:auto;padding:7px;background:var(--panel);border:1px solid var(--line);border-radius:12px;box-shadow:0 4px 20px #112b2433;scrollbar-width:thin}
+#mapQuickbar button{flex-shrink:0;padding:9px 11px;font-size:.86rem}
+#mapQuickbar button[aria-pressed="true"]{background:var(--accent);color:white}
+body.map-workspace #mapToolbar{position:absolute;z-index:1001;top:72px;left:58px;right:12px;width:min(900px,calc(100vw - 70px));max-height:min(48vh,430px);overflow:auto;margin:0;padding:14px;box-shadow:0 8px 28px #112b2433}
+body.map-workspace #mapToolbar .filters{grid-template-columns:repeat(2,minmax(0,1fr));margin-bottom:10px}
+body.map-workspace #mapToolbar .actions{gap:6px}
+body.map-workspace #mapToolbar .actions button{padding:.5rem .7rem}
+body.map-workspace #layers,body.map-workspace #mapDetail{position:absolute;z-index:950;top:72px;bottom:16px;height:auto;max-height:calc(100vh - 90px);width:min(320px,calc(100vw - 24px));overflow:auto;margin:0;padding:16px;box-shadow:0 10px 28px #112b2433}
+body.map-workspace #layers{left:12px}
+body.map-workspace #mapDetail{right:12px}
+body.map-workspace .mapGrid.noLayers #layers,body.map-workspace .mapGrid.noDetail #mapDetail{display:none}
+body.map-workspace .leaflet-top.leaflet-left{top:64px}
+body.map-workspace .leaflet-bottom{z-index:800}
+@media(max-width:790px){
+ #mapQuickbar{left:6px;right:6px;max-width:calc(100vw - 12px);top:6px;padding:5px}
+ body.map-workspace #mapToolbar{top:64px;left:6px;right:6px;width:calc(100vw - 12px)}
+ body.map-workspace #mapToolbar .filters{grid-template-columns:1fr 1fr}
+ body.map-workspace #layers,body.map-workspace #mapDetail{top:65px;bottom:6px;width:min(310px,calc(100vw - 12px))}
+ body.map-workspace .leaflet-top.leaflet-left{top:62px}
+}
+
+@media print{#sidebar,header,#status,#toast,.noPrint{display:none!important}main{margin:0;width:100%;padding:0}.panel{border:none}.report-record{break-inside:avoid}body{background:white;color:black}#mapView{display:none!important}@page{size:A4;margin:15mm}}
+
+/* KML / GeoJSON katman çizim stili: renk, kalınlık ve iç dolgu */
+.styleGroup{border:1px solid var(--line);border-radius:10px;margin:12px 0;padding:12px}
+.styleGroup legend{font-weight:700;color:var(--ink);padding:0 8px}
+.styleFields{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:8px 15px}
+.styleFields label{font-size:.9rem;margin:4px 0}
+.styleFields input[type=color]{height:44px;width:100%;padding:3px;cursor:pointer}
+.styleFields input[type=number]{width:100%}
+
+
+/* AZiL offline help center: two-pane searchable guide */
+.atlasHelpRoot{width:min(100%,1050px);max-width:100%;font-size:.98rem}
+.atlasHelpRoot>label{display:block;margin-bottom:6px;font-weight:700}
+#atlasHelpSearch{display:block;width:100%;margin:0 0 14px;padding:11px 13px}
+.atlasHelpLayout{display:grid;grid-template-columns:minmax(195px,245px) minmax(0,1fr);gap:15px;min-height:300px}
+.atlasHelpNav{display:flex;flex-direction:column;gap:6px;min-width:0;max-height:min(65vh,680px);overflow-y:auto;border-right:1px solid var(--line);padding-right:9px}
+.atlasHelpNav button{display:flex;flex-direction:column;text-align:left;align-items:stretch;gap:3px;padding:12px;border:1px solid transparent;border-radius:9px;background:transparent;cursor:pointer;line-height:1.3}
+.atlasHelpNav button[aria-current=page]{background:var(--panel);border-color:var(--line)}
+.atlasHelpNav button small{font-size:.78rem;opacity:.72;white-space:normal}
+.atlasHelpArticle{min-width:0;max-height:min(65vh,680px);overflow-y:auto;padding:0 8px}
+.atlasHelpArticle h2{font-size:1.35rem;margin:.1rem 0 .7rem}
+.atlasHelpArticle h3{font-size:1.05rem;margin:1rem 0 .4rem}
+.atlasHelpArticle p{line-height:1.65;margin:.55rem 0}
+.atlasHelpArticle code{display:inline-block;white-space:normal;overflow-wrap:anywhere;font-size:.85rem}
+.atlasHelpLead{opacity:.75;font-size:1rem}
+.atlasHelpSection{padding:10px 0 15px;border-bottom:1px solid var(--line)}
+.atlasHelpResult{width:100%;display:flex;flex-direction:column;text-align:left;align-items:flex-start;margin:7px 0;padding:12px;border:1px solid var(--line);border-radius:8px}
+.atlasHelpResult small{opacity:.7}
+.atlasHelpShortcut>div{display:grid;grid-template-columns:minmax(130px,180px) minmax(0,1fr);gap:12px;padding:10px;border-bottom:1px solid var(--line)}
+.atlasHelpShortcut kbd{font-family:ui-monospace,monospace;background:var(--panel);padding:5px 8px;border-radius:6px}
+.atlasHelpPre{white-space:pre-wrap;overflow-wrap:anywhere;max-width:100%;padding:12px;border-radius:7px;background:var(--panel)}
+.atlasHelpFooter{margin:12px 0 0;font-size:.79rem;opacity:.72}
+@media(max-width:760px){
+ .atlasHelpLayout{display:block}
+ .atlasHelpNav{flex-direction:row;flex-wrap:nowrap;border:0;border-bottom:1px solid var(--line);max-height:none;overflow-x:auto;padding-bottom:8px;margin-bottom:12px}
+ .atlasHelpNav button{flex:0 0 145px}
+ .atlasHelpArticle{max-height:55vh;padding:0}
+}

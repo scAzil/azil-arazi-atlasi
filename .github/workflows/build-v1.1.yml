@@ -1,0 +1,142 @@
+name: Build Arazi Atlasi v1.1.0 Windows x64
+
+on:
+  push:
+    branches: [feat/atlas-v1.1-map-workspace]
+    paths:
+      - '.github/workflows/build-v1.1.yml'
+      - 'desktop-source/app/**'
+      - 'tests/**'
+      - 'web-integration/**'
+      - 'docs/**'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  windows-build:
+    runs-on: windows-2022
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Verify patched sources before packaging
+        shell: pwsh
+        run: |
+          node --check "desktop-source/app/app/desktop.js"
+          node --check "desktop-source/app/electron/main.cjs"
+          node --check "desktop-source/app/electron/preload.cjs"
+          node --check "desktop-source/app/electron/portable-archive.cjs"
+          node --check "desktop-source/app/app/atlas-standard.js"
+          node --check "web-integration/atlas-archive-adapter.js"
+          node --check "desktop-source/app/app/startup-diagnostics.js"
+          node --check "desktop-source/app/app/help-center.js"
+          node --check "desktop-source/app/electron/help-diagnostics.cjs"
+          if ($LASTEXITCODE -ne 0) { throw "Node syntax preflight failed" }
+      - name: Fetch and verify original v1.0.3 Windows package
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          New-Item -ItemType Directory -Force -Path "_download" | Out-Null
+          gh release download "v1.0.3" --repo "$env:GITHUB_REPOSITORY" --pattern "Arazi-Atlasi-1.0.3-Windows-x64.zip" --dir "_download"
+          $source = "_download/Arazi-Atlasi-1.0.3-Windows-x64.zip"
+          $hash = (Get-FileHash -LiteralPath $source -Algorithm SHA256).Hash.ToLowerInvariant()
+          if ($hash -ne "1a6bb52967afb7545e99ad7a1af7a0c4c72674d0a78246a04bb02bbb9525a9ae") {
+            throw "Original Windows release checksum mismatch"
+          }
+          Expand-Archive -LiteralPath $source -DestinationPath "_base" -Force
+          if (-not (Test-Path "_base/Arazi-Atlasi/resources/app.asar")) { throw "Baseline Electron app.asar missing" }
+      - name: Overlay improved UI into original Electron app
+        shell: pwsh
+        run: |
+          npm install --no-save --no-package-lock "@electron/asar@3.4.1" "playwright-core@1.56.1"
+          npx --no-install asar extract "_base/Arazi-Atlasi/resources/app.asar" "_app"
+          $protected = @("electron/store.cjs", "app/pafta.js", "app/transfer.js")
+          $baseline = @{}
+          foreach ($file in $protected) {
+            $baseline[$file] = (Get-FileHash -LiteralPath "_app/$file" -Algorithm SHA256).Hash
+          }
+          $edits = @("app/index.html", "app/desktop.css", "app/desktop.js",
+                     "electron/main.cjs", "electron/preload.cjs", "electron/portable-archive.cjs",
+                     "app/atlas-standard.js", "app/startup-diagnostics.js",
+                     "app/help-center.js", "electron/help-diagnostics.cjs", "package.json")
+          foreach ($file in $edits) {
+            Copy-Item -LiteralPath "desktop-source/app/$file" -Destination "_app/$file" -Force
+          }
+          foreach ($file in $protected) {
+            if ($baseline[$file] -ne (Get-FileHash -LiteralPath "_app/$file" -Algorithm SHA256).Hash) {
+              throw "Protected archive/GIS/transfer source changed: $file"
+            }
+          }
+          python "tests/check_v1_1.py" "_app"
+          if ($LASTEXITCODE -ne 0) { throw "UI structural test failed" }
+          node "tests/portable-archive.test.cjs" "_app"
+          node "tests/help-diagnostics.test.cjs"
+          if ($LASTEXITCODE -ne 0) { throw "Portable archive test failed" }
+          node "tests/help-diagnostics.test.cjs"
+          if ($LASTEXITCODE -ne 0) { throw "Privacy-safe help diagnostics test failed" }
+          node "tests/renderer-startup-smoke.cjs" "_app/app"
+          if ($LASTEXITCODE -ne 0) { throw "Renderer browser startup smoke test failed" }
+          npx --no-install asar pack "_app" "_base/Arazi-Atlasi/resources/app.asar"
+      - name: Validate repackaged Electron source
+        shell: pwsh
+        run: |
+          npx --no-install asar extract "_base/Arazi-Atlasi/resources/app.asar" "_verify"
+          python "tests/check_v1_1.py" "_verify"
+          node "tests/portable-archive.test.cjs" "_verify"
+          node --check "_verify/app/desktop.js"
+          node --check "_verify/electron/main.cjs"
+          node --check "_verify/electron/preload.cjs"
+          node --check "_verify/app/help-center.js"
+          node --check "_verify/electron/help-diagnostics.cjs"
+          Get-Item "_base/Arazi-Atlasi/resources/app.asar" | Select-Object Name,Length
+      - name: Create portable test ZIP and integrity record
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path "_dist" | Out-Null
+          @'
+          AZiL Arazi Atlası v1.1.0 - Windows x64
+          
+          Build candidate for the v1.1.0 stable GitHub Release.
+          Extract the complete ZIP to a NEW folder.
+          Run 'Arazi Atlasi.exe' alongside all supplied resources and DLL files.
+          
+          IMPORTANT: The archive (Arsiv) and backups (Yedekler) live next to the EXE.
+          Back up BOTH folders from your previous v1.0.3 installation before testing.
+          A fresh installation folder does not automatically find your previous archive.
+          Test with non-sensitive sample data first.
+          
+          Map: fills app window. Toggle Menu / Tools / Layers / Detail from top bar.
+          'Tam ekran' / F11 switches the native window to fullscreen.
+          New settings: photo resolution 1280/1920/original and storage summary.
+          New KML/KMZ layer styles for point, line and polygon. For polygon
+          interior transparency set fill opacity to 0; outline stays visible.
+          Archive export/import: AZIL-ATLAS/1 portable ZIP for CURRENT data only.
+          Old restore / external restore / AppData import dialogs are removed.
+          Existing Arsiv, Yedekler and deleted-data files are NOT auto-deleted.
+          No account or cloud sync is used. Web support requires integration
+          into the original website app, not the tr.gg iframe wrapper.
+          New offline searchable help, About, release notes, troubleshooting,
+          read-only archive health and privacy-safe diagnostics.
+          Phone-to-PC QR transfer remains one way.
+          '@ | Set-Content "_base/ONCE-OKU.txt" -Encoding UTF8
+          Compress-Archive -Path "_base/*" -DestinationPath "_dist/Arazi-Atlasi-1.1.0-Windows-x64.zip" -CompressionLevel Optimal -Force
+          $zip = "_dist/Arazi-Atlasi-1.1.0-Windows-x64.zip"
+          $hash = (Get-FileHash -LiteralPath $zip -Algorithm SHA256).Hash
+          "$hash  Arazi-Atlasi-1.1.0-Windows-x64.zip" | Set-Content "_dist/SHA256SUMS.txt" -Encoding ascii
+          python -c "import zipfile; p=r'_dist/Arazi-Atlasi-1.1.0-Windows-x64.zip'; z=zipfile.ZipFile(p); assert z.testzip() is None; assert any(n.endswith('/resources/app.asar') for n in z.namelist()); print('ZIP integrity OK; files:',len(z.namelist()))"
+      - name: Upload test version for Windows user validation
+        uses: actions/upload-artifact@v4
+        with:
+          name: Arazi-Atlasi-v1.1.0-Windows-x64
+          path: |
+            _dist/Arazi-Atlasi-1.1.0-Windows-x64.zip
+            _dist/SHA256SUMS.txt
+          if-no-files-found: error
