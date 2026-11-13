@@ -99,7 +99,7 @@ final class AtlasStore {
         String title=input.optString("title","").trim();
         String project=input.optString("project","").trim();
         String note=input.optString("note","").trim();
-        String parent=input.optString("parentId","");
+        String parent=input.isNull("parentId")?"":input.optString("parentId","");
         if(title.isEmpty()||title.length()>150||note.length()>12000)
             throw new IOException("Başlık veya not uzunluğu geçersiz.");
         if(!projectExists(next,project))throw new IOException("Proje bulunamadı.");

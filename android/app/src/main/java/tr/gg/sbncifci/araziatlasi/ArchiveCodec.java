@@ -200,13 +200,15 @@ final class ArchiveCodec {
         for(int i=0;i<records.length();i++){
             JSONArray photos=records.getJSONObject(i).getJSONArray("photos");
             for(int j=0;j<photos.length();j++){
-                String ref=photos.getJSONObject(j).optString("ref","");
+                JSONObject photo=photos.getJSONObject(j);
+                String ref=photo.isNull("ref")?"":photo.optString("ref","");
                 if(!ref.isEmpty())refs.add(ref);
             }
         }
         JSONArray layers=data.getJSONArray("layers");
         for(int i=0;i<layers.length();i++){
-            String ref=layers.getJSONObject(i).optString("ref","");
+            JSONObject layer=layers.getJSONObject(i);
+            String ref=layer.isNull("ref")?"":layer.optString("ref","");
             if(!ref.isEmpty())refs.add(ref);
         }
         for(String ref:refs)if(!validRef(ref))throw new IOException("Güvensiz varlık adı.");
