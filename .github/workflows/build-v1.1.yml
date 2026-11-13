@@ -73,6 +73,7 @@ jobs:
           python "tests/check_v1_1.py" "_app"
           node "tests/portable-archive.test.cjs" "_app"
           node "tests/renderer-startup-smoke.cjs" "_app/app"
+          if ($LASTEXITCODE -ne 0) { throw "Renderer browser startup smoke test failed" }
           npx --no-install asar pack "_app" "_base/Arazi-Atlasi/resources/app.asar"
       - name: Validate repackaged Electron source
         shell: pwsh
