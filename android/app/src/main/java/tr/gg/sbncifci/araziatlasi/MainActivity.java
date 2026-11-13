@@ -29,6 +29,8 @@ import android.widget.Toast;
 import androidx.webkit.WebViewAssetLoader;
 
 import org.json.JSONObject;
+import com.google.zxing.integration.android.IntentIntegrator;
+import com.google.zxing.integration.android.IntentResult;
 
 import java.io.ByteArrayInputStream;
 import java.io.File;
@@ -87,7 +89,7 @@ public final class MainActivity extends Activity {
         settings.setJavaScriptCanOpenWindowsAutomatically(false);
         settings.setMediaPlaybackRequiresUserGesture(true);
         settings.setMixedContentMode(WebSettings.MIXED_CONTENT_NEVER_ALLOW);
-        settings.setUserAgentString(settings.getUserAgentString()+" AZiL-Arazi-Atlasi-Android/0.1");
+        settings.setUserAgentString(settings.getUserAgentString()+" AZiL-Arazi-Atlasi-Android/0.1.0-beta.2");
         webView.setWebViewClient(new WebViewClient(){
             @Override public WebResourceResponse shouldInterceptRequest(WebView view,WebResourceRequest req){
                 return assetLoader.shouldInterceptRequest(req.getUrl());
@@ -193,11 +195,34 @@ public final class MainActivity extends Activity {
             try{startActivityForResult(intent,IMPORT_ARCHIVE);}
             catch(Exception e){archiveFailed(e);}
         });}
+        @JavascriptInterface public void scanDesktopQr(){runOnUiThread(()->{
+            new IntentIntegrator(MainActivity.this)
+              .setDesiredBarcodeFormats(IntentIntegrator.QR_CODE)
+              .setPrompt("Windows Arazi Atlası QR kodunu okutun")
+              .setBeepEnabled(false)
+              .setBarcodeImageEnabled(false)
+              .setOrientationLocked(false)
+              .initiateScan();
+        });}
         @JavascriptInterface public void requestLocation(){runOnUiThread(MainActivity.this::requestLocation);}
     }
 
     @Override protected void onActivityResult(int request,int result,Intent data){
         super.onActivityResult(request,result,data);
+        IntentResult scanned=IntentIntegrator.parseActivityResult(request,result,data);
+        if(scanned!=null){
+            String value=scanned.getContents();
+            if(value==null){
+                showToast("QR tarama iptal edildi.");
+            }else if(value.length()>4000){
+                showToast("QR verisi çok uzun.");
+            }else{
+                webView.evaluateJavascript(
+                  "if(window.AZILQr)window.AZILQr.onScanResult("+JSONObject.quote(value)+");",
+                  null);
+            }
+            return;
+        }
         if(request==PICK_PHOTO){
             if(fileChooser!=null){
                 fileChooser.onReceiveValue(result==RESULT_OK&&data!=null&&data.getData()!=null?
