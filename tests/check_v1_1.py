@@ -56,13 +56,20 @@ def test(app):
     assert "QR" in js and "startReceiver" in js, "Phone-to-PC transfer must survive"
     assert "function loadKMZ" in js and "function drawMeasure" in js
     assert pkg["main"] == "electron/main.cjs"
-    assert pkg["version"] == "1.1.0-beta.3"
+    assert pkg["version"] == "1.1.0-beta.4"
     assert (root / "app/pafta.js").is_file()
     assert (root / "app/transfer.js").is_file()
     assert (root / "electron/store.cjs").is_file()
     assert (root / "electron/portable-archive.cjs").is_file()
     assert (root / "app/atlas-standard.js").is_file()
     assert (root / "app/startup-diagnostics.js").is_file()
+    assert (root / "app/help-center.js").is_file()
+    assert (root / "electron/help-diagnostics.cjs").is_file()
+    assert "function openHelpCenter" in js
+    assert "help:guide" in main and "help:notes" in main
+    assert "help-diagnostics" in main and "help-diagnostics" in preload
+    assert "data-action=\"help-map\"" in html
+    assert "atlasHelpLayout" in css
     assert "function openLayerStyleEditor" in js
     assert "geometryStyle(f.geometry,l)" in js
     assert "Yedekten geri yükle" not in js

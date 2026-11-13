@@ -8,11 +8,13 @@ Arazi, CBS, proje/ziyaret ve saha fotoğraflarını yerel arşivde birleştiren 
 
 Bu sürüm kullanıcı verilerini `Arsiv` ve `Yedekler` klasörlerinde tutar. ZIP'i tamamen çıkarın; `Arazi Atlasi.exe` dosyasını `resources` klasöründen ayırmayın.
 
-## v1.1.0-beta.3 — Harita Çalışma Alanı (test sürümü)
+## v1.1.0-beta.4 — Harita Çalışma Alanı (test sürümü)
 
 [Geliştirme dalı](https://github.com/scAzil/azil-arazi-atlasi/tree/feat/atlas-v1.1-map-workspace) · [Windows test derlemeleri (Actions)](https://github.com/scAzil/azil-arazi-atlasi/actions)
 
 Yenilikler:
+- **Yardım Merkezi (beta.4):** F1 ve üst Yardım menüsünden açılan çevrimdışı, aranabilir rehber; Program Hakkında, kullanım kılavuzu, sürüm notları, sorun giderme, yerel veri klasörleri, tanılama ve kısayollar.
+- **Veri gizliliği:** Tanılama panoya yalnızca sürüm/sistem/nesne sayılarını kopyalar; koordinatlar, fotoğraflar, kayıt adları ve API anahtarları hariç tutulur. Arşiv sağlığı salt okunur denetlenir.
 - **Açılış düzeltmesi (beta.3):** Beta.2'de kullanıcı arayüzünü durduran JavaScript sözdizimi hatası giderildi. Başlangıç hataları artık alt durum çubuğunda gösterilir; ayrıca Chromium ile açılış testi eklendi.
 - **KML/KMZ çizim stili:** Nokta, çizgi ve poligonlar için ayrı renk/kalınlık ve dolgu seçenekleri. Alanın içini tamamen boş bırakmak için dolgu saydamlığı = 0.
 - **Yerel arşiv standardı AZIL-ATLAS/1:** Güncel kayıtları, katmanları ve bağlı fotoğraf/paftaları SHA-256 doğrulamalı ZIP dosyasında dışa aktar ve güvenli biçimde yeniden içe aktar.

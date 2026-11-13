@@ -40,14 +40,17 @@ async function test(){
   await page.addInitScript(()=>{
    window.desktop={
     call:async(command)=>{
+     if(command==='help-diagnostics')return {application:'AZiL Arazi Atlası',version:'1.1.0-beta.4',platform:'win32',architecture:'x64',electron:'34.0',recordCount:0,warningPresent:false};
+     if(command==='help-copy-diagnostics')return true;
+     if(command==='help-archive-health')return {projects:0,records:0,visits:0,assets:0,missingParents:0,missingAssets:0,partial:false};
      if(command==='state')return {
-      version:'1.1.0-beta.3',archivePath:'C:\\Atlas\\Arsiv',backupPath:'C:\\Atlas\\Yedekler',
+      version:'1.1.0-beta.4',archivePath:'C:\\Atlas\\Arsiv',backupPath:'C:\\Atlas\\Yedekler',
       settings:{theme:'light',font:15,dense:false,basemap:'osm',photoMax:'original'},
       projects:[],records:[],trash:[],layers:[],history:[],lastBackup:null,warning:null
      };
      return null;
     },
-    onMenu:()=>{}
+    onMenu:fn=>{window.__atlasTestMenu=fn}
    };
   });
   await page.goto('http://127.0.0.1:'+port+'/index.html',{waitUntil:'load'});
@@ -65,6 +68,24 @@ async function test(){
   assert.ok(result.nav>=5,'Nav must be rendered: '+JSON.stringify(result));
   assert.notEqual(result.status,'Arşiv açılıyor…');
   console.log('PASS: renderer mounted navigation and loaded archive state');
+  await page.evaluate(()=>window.__atlasTestMenu('help:guide'));
+  await page.locator('#atlasHelpRoot').waitFor();
+  assert.ok((await page.locator('#atlasHelpArticle').innerText()).includes('Kullanım Kılavuzu'));
+  await page.locator('#atlasHelpSearch').fill('KML');
+  assert.ok((await page.locator('#atlasHelpArticle').innerText()).includes('Arama sonuçları'));
+  await page.locator('.atlasHelpNav [data-help-topic="notes"]').click();
+  assert.ok((await page.locator('#atlasHelpArticle').innerText()).includes('Sürüm Notları'));
+  await page.locator('.atlasHelpNav [data-help-topic="data"]').click();
+  await page.locator('[data-help-action="health"]').click();
+  assert.ok((await page.locator('#atlasHelpArticle').innerText()).includes('Salt okunur arşiv kontrolü'));
+  await page.locator('.atlasHelpNav [data-help-topic="diagnostics"]').click();
+  await page.locator('[data-help-action="diagnostics-load"]').click();
+  assert.ok((await page.locator('#atlasHelpArticle').innerText()).includes('1.1.0-beta.4'));
+  await page.locator('[data-help-action="diagnostics-copy"]').click();
+  await page.locator('.atlasHelpNav [data-help-topic="shortcuts"]').click();
+  assert.ok((await page.locator('#atlasHelpArticle').innerText()).includes('F11'));
+  assert.equal(errors.length,0,errors.join('\\n'));
+  console.log('PASS: offline Help Center menus, search, release notes, health and safe diagnostics');
  }finally{await browser.close();server.close()}
 }
 test().catch(e=>{console.error(e);process.exitCode=1;server.close()});
