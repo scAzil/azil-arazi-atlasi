@@ -14,3 +14,14 @@ dialog{width:calc(100% - 28px);max-width:490px;max-height:85%;overflow:auto;bord
 .layerRow{border-bottom:1px solid var(--line);padding:10px 0}.layerRow h4{margin:0 0 6px}.layerRow .actions{display:flex;gap:7px}.layerRow button{font-size:12px;padding:6px 9px;min-height:31px}.stylebar{height:5px;border-radius:4px;margin-bottom:7px}.helpText h3{margin-top:20px}
 #toast{position:fixed;z-index:3000;bottom:77px;left:12px;right:12px;pointer-events:none;background:#1f3d33;color:#fff;text-align:center;border-radius:10px;padding:11px;opacity:0;transition:opacity .2s}#toast.visible{opacity:1}
 @media(min-width:750px){.top{height:76px}.mapTop{justify-content:center}.tabs{height:75px}.tabs button{font-size:13px}.view:not(#view-map){max-width:900px;margin:auto}}
+
+/* Windows QR transfer controls */
+.qrChoice{display:flex;align-items:center;gap:10px;padding:9px 7px;margin:0;border-bottom:1px solid var(--line);font-weight:400}
+.qrChoice input{width:21px;min-width:21px;height:21px;accent-color:var(--accent)}
+.qrChoice span{display:flex;flex-direction:column;gap:2px}
+.qrChoice small{color:var(--muted)}
+#qrRecords{max-height:34vh;overflow-y:auto;background:#fff;border:1px solid var(--line);border-radius:10px}
+#qrProgress{display:block;width:100%;height:15px;margin:12px 0;accent-color:var(--accent)}
+#qrReceipt{font-size:13px;color:var(--accent);min-height:22px}
+.tabs button{min-width:0;font-size:10px}
+.tabs button span{font-size:20px}
