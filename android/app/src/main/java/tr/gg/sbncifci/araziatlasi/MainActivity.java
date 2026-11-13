@@ -29,6 +29,7 @@ import android.widget.Toast;
 import androidx.webkit.WebViewAssetLoader;
 
 import org.json.JSONObject;
+import org.json.JSONArray;
 import com.google.zxing.integration.android.IntentIntegrator;
 import com.google.zxing.integration.android.IntentResult;
 
@@ -45,6 +46,7 @@ public final class MainActivity extends Activity {
     private final ExecutorService executor=Executors.newSingleThreadExecutor();
     private final Handler mainHandler=new Handler(Looper.getMainLooper());
     private AtlasStore store;
+    private LanTransfer.Session lanSession;
     private WebView webView;
     private ValueCallback<Uri[]> fileChooser;
     private CancellationSignal locationSignal;
@@ -141,6 +143,18 @@ public final class MainActivity extends Activity {
             }
         });
     }
+    private void notifyQr(String method,JSONObject value){
+        runOnUiThread(()->{
+            if(webView!=null)
+                webView.evaluateJavascript(
+                   "if(window.AZILQr&&window.AZILQr."+method+")window.AZILQr."+method+
+                   "("+value.toString()+");",null);
+        });
+    }
+    private void notifyQrFailure(Exception error){
+        try{notifyQr("lanFailed",new JSONObject().put("error",safeError(error)));}
+        catch(Exception ignored){}
+    }
     private void archiveFailed(Exception e){
         try{informBrowser("archiveDone",new JSONObject().put("ok",false).put("error",safeError(e)));}
         catch(Exception ignored){}
@@ -195,6 +209,53 @@ public final class MainActivity extends Activity {
             try{startActivityForResult(intent,IMPORT_ARCHIVE);}
             catch(Exception e){archiveFailed(e);}
         });}
+        @JavascriptInterface public void connectLan(String invitation){
+            executor.execute(()->{
+                try{
+                    LanTransfer.Invite parsed=LanTransfer.parseInvite(invitation);
+                    LanTransfer.Session session=new LanTransfer.Session(parsed);
+                    JSONObject hello=session.request("hello",new JSONObject());
+                    if(!"hello".equals(hello.optString("kind")))
+                        throw new java.io.IOException("Windows yerel aktarımı yanıt vermedi.");
+                    lanSession=session;
+                    notifyQr("lanConnected",new JSONObject().put("address",parsed.ip));
+                }catch(Exception error){lanSession=null;notifyQrFailure(error);}
+            });
+        }
+        @JavascriptInterface public void sendLan(String selectedJson){
+            executor.execute(()->{
+                try{
+                    LanTransfer.Session session=lanSession;
+                    if(session==null)throw new java.io.IOException("Yerel bağlantı yok. QR kodunu yeniden okutun.");
+                    JSONArray ids=new JSONArray(selectedJson);
+                    if(ids.length()<1||ids.length()>10000)throw new java.io.IOException("Kayıt sayısı geçersiz.");
+                    JSONObject started=session.request("begin",new JSONObject().put("count",ids.length()));
+                    if(!"ready".equals(started.optString("kind")))
+                        throw new java.io.IOException("Windows aktarımı başlatılamadı.");
+                    int warnings=0;
+                    for(int i=0;i<ids.length();i++){
+                        String id=ids.getString(i);
+                        JSONObject record=LanTransfer.prepareRecord(store,id);
+                        JSONObject receipt=session.request("record",new JSONObject().put("record",record));
+                        if(!"receipt".equals(receipt.optString("kind"))||!id.equals(receipt.optString("key")))
+                            throw new java.io.IOException("Windows kayıt makbuzu uyuşmadı.");
+                        String status=receipt.optString("status","unknown");
+                        if(!status.equals("added")&&!status.equals("same"))warnings++;
+                        notifyQr("lanProgress",new JSONObject()
+                           .put("done",i+1).put("total",ids.length()).put("status",status));
+                    }
+                    JSONObject done=session.request("done",new JSONObject());
+                    if(!"done".equals(done.optString("kind"))||
+                       done.optInt("received")!=ids.length())
+                        throw new java.io.IOException("Windows son aktarım onayını vermedi.");
+                    notifyQr("lanComplete",new JSONObject()
+                        .put("total",ids.length()).put("warnings",warnings));
+                }catch(Exception e){notifyQrFailure(e);}
+            });
+        }
+        @JavascriptInterface public void clearLan(){
+            executor.execute(()->{lanSession=null;});
+        }
         @JavascriptInterface public void scanDesktopQr(){runOnUiThread(()->{
             new IntentIntegrator(MainActivity.this)
               .setDesiredBarcodeFormats(IntentIntegrator.QR_CODE)
