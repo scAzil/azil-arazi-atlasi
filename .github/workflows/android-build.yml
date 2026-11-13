@@ -1,0 +1,102 @@
+name: Build AZiL Arazi Atlası Android APK (beta)
+
+on:
+  push:
+    branches: [feat/android-v0.1-offline-atlas]
+    paths:
+      - 'android/**'
+      - 'tests/android-web-smoke.cjs'
+      - '.github/workflows/android-build.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  android-apk:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v3
+      - name: Install Android API 35 tools
+        shell: bash
+        run: |
+          set -euo pipefail
+          sdkmanager --install 'platforms;android-35' 'build-tools;35.0.0' 'platform-tools'
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.11.1'
+      - name: Build debug APK and run Java tests
+        shell: bash
+        working-directory: android
+        run: |
+          set -euo pipefail
+          gradle --no-daemon --stacktrace :app:assembleDebug :app:testDebugUnitTest
+          test -s app/build/outputs/apk/debug/app-debug.apk
+      - name: Validate APK metadata and ZIP integrity
+        shell: bash
+        run: |
+          set -euo pipefail
+          APK=android/app/build/outputs/apk/debug/app-debug.apk
+          unzip -t "$APK" | tail -n 2
+          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging "$APK" | head -n 5
+          python3 - <<'PY'
+          from pathlib import Path
+          import zipfile
+          p=Path('android/app/build/outputs/apk/debug/app-debug.apk')
+          with zipfile.ZipFile(p) as z:
+              names=z.namelist()
+              assert 'assets/index.html' in names
+              assert 'assets/atlas.js' in names
+              assert 'assets/vendor/leaflet.js' in names
+              assert 'classes.dex' in names
+              assert z.testzip() is None
+          print('Android APK validated:',p.stat().st_size,'bytes')
+          PY
+      - name: Real Chromium field UI smoke
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm install --no-save --no-package-lock playwright-core@1.56.1
+          node tests/android-web-smoke.cjs
+      - name: Package installable APK for testing
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p _dist
+          cp android/app/build/outputs/apk/debug/app-debug.apk "_dist/AZiL-Arazi-Atlasi-Android-v0.1.0-beta.1.apk"
+          sha256sum _dist/*.apk > _dist/SHA256SUMS.txt
+          cat > _dist/ONCE-OKU.txt <<'EOF'
+          AZiL Arazi Atlası Android v0.1.0-beta.1
+          ---------------------------------------
+          Android 8.0 (API 26) ve üzeri, Android telefon/tablet.
+          Bu bir TEST sürümüdür. Henüz Google Play üzerinde yayımlanmadı.
+          APK, GitHub Actions debug anahtarıyla imzalanmıştır.
+          Başka bir Android sürümüne güncellerken paket imzası değişebileceğinden
+          önce AZIL-ATLAS/1 ZIP arşivinizi dışa aktarın.
+
+          Yerel projeler/noktalar/ziyaretler/fotoğraflar internet olmadan çalışır.
+          GPS izinleri sadece "Konumum" düğmesinde istenir.
+          OSM çevrimiçi altlığı isteğe bağlıdır ve internet gerektirir.
+          KML/GeoJSON vektör dosyası en fazla 3 MB.
+          Arşiv ZIP aktarımı ilk Android beta için 180 MB açılmış içerikle sınırlıdır.
+          Hesap, bulut eşitleme ve iki yönlü QR özelliği yoktur.
+          Web sitesindeki canlı Arazi Atlası projesi değiştirilmedi.
+
+          Güvenlik: Resmî GitHub deposu ve SHA256SUMS.txt doğrulaması dışında
+          APK indirmeyin. Kurumsal/hizmete özel saha verilerini açık depolara
+          yüklemeyin. Android uygulama verisini silmek arşivi de silebilir.
+          EOF
+      - uses: actions/upload-artifact@v4
+        with:
+          name: AZiL-Arazi-Atlasi-Android-v0.1.0-beta.1
+          path: |
+            _dist/AZiL-Arazi-Atlasi-Android-v0.1.0-beta.1.apk
+            _dist/SHA256SUMS.txt
+            _dist/ONCE-OKU.txt
+          if-no-files-found: error
